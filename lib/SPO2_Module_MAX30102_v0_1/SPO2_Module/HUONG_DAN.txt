@@ -1,0 +1,149 @@
+MÔ-ĐUN ƯỚC TÍNH SpO₂ CHO NGUYÊN MẪU NGHIÊN CỨU — v0.1.0
+Ngày: 24/09/2026
+
+1. KẾT LUẬN KIỂM TRA PROJECT CŨ
+Có cơ sở khoa học về phương pháp đo. Project gọi hàm
+maxim_heart_rate_and_oxygen_saturation() trong thư viện SparkFun MAX3010x,
+nguồn thuật toán Maxim MAXREFDES117. Đây là thuật toán ước tính SpO₂
+bằng hai kênh quang học RED và IR, không phải mô hình AI đã huấn luyện.
+Chưa có bằng chứng từ các dữ liệu đã kiểm tra để khẳng định sai số SpO₂
+của thiết bị hoặc khả năng nhận biết thiếu oxy.
+
+2. CODE CŨ ĐANG LÀM GÌ?
+File src/main.cpp trong project được gửi:
+- Dòng 55: SENSOR_FS = 100 Hz.
+- Dòng 438–453: calculateSpo2() đưa 100 cặp RED/IR vào thuật toán Maxim.
+- Dòng 922–930: giữ một mẫu mỗi bốn mẫu (chỉ số 0, 4, 8,...).
+- Dòng 1399–1416: tính SpO₂ cuối phiên; đánh giá poorSignal riêng.
+- Dòng 1319: vẫn in SpO₂ nếu validSpo2, ngay cả khi poorSignal = true.
+- Dòng 1446: cấu hình cảm biến 100 Hz, sampleAverage=1, hai LED,
+  pulseWidth=411, adcRange=4096, LED amplitude=0x2A.
+Thư viện thực tế trong .pio/libdeps đặt FreqS=25 và BUFFER_SIZE=100.
+Như vậy, đầu vào 25 Hz phù hợp phiên bản thư viện này. Không được lấy
+thông số của một phiên bản Maxim khác để kết luận 25 Hz ở đây là sai.
+
+Phiên đủ 6000 mẫu: cửa sổ tính gồm chỉ số 5600, 5604,...,5996,
+tương đương đoạn khoảng bốn giây cuối, không phải trung bình SpO₂ 60 giây.
+Việc chọn một trong bốn mẫu chưa có bộ lọc chống chồng phổ riêng trước
+khi giảm tần số. Mô-đun giữ cách này để dễ đối chiếu, chưa tuyên bố khả
+năng chống nhiễu chuyển động. Bộ lọc trung bình trong thuật toán nằm
+sau bước giảm tần số và không giải quyết đầy đủ hạn chế này.
+
+3. CƠ SỞ KHOA HỌC
+Hemoglobin có oxy và không có oxy hấp thụ ánh sáng đỏ/hồng ngoại khác nhau.
+PPG có phần nền DC và phần dao động theo mạch AC. Tỷ số sử dụng là:
+    R = (AC_RED / DC_RED) / (AC_IR / DC_IR)
+Sau đó ánh xạ R sang SpO₂ bằng đường hiệu chuẩn thực nghiệm.
+Trong bản thư viện được gửi, kết quả thực tế lấy từ bảng uch_spo2_table;
+chú thích liên hệ bảng với đa thức:
+    SpO₂ ≈ -45.060 × R² + 30.354 × R + 94.845
+Không thay việc tra bảng bằng tính đa thức tùy ý. Chỉ số bảng trong code
+là R nhân 100 đã làm tròn theo số nguyên. Phát hiện đáy, tách biên độ
+AC trên nền nội suy và tổng hợp tỷ số theo cách thư viện được giữ lại.
+Đường hiệu chuẩn mặc định không phải bằng chứng mọi board MAX30102
+đều có cùng độ chính xác. Thiết kế quang học và điều kiện đo có ảnh hưởng.
+
+Nguồn chính thức (truy cập ngày 24/09/2026):
+[1] Analog Devices, Guidelines for SpO2 Measurement (26/03/2019):
+https://www.analog.com/en/resources/technical-articles/guidelines-for-spo2-measurement--maxim-integrated.html
+[2] Analog Devices, MAX30102 datasheet:
+https://www.analog.com/media/en/technical-documentation/data-sheets/max30102.pdf
+[3] Analog Devices, Does the MAX30102 have an R-curve associated with it...:
+https://ez.analog.com/optical_sensing/a/documents/c/max30102efd-t-faq/DO19495/does-the-max30102-have-an-r-curve-associated-with-it-to-correlate-the-ratio-r-acred-dcred-acir-dcir
+[4] Mã nguồn do SparkFun phân phối; nguồn kiểm tra chính là bản đi kèm
+project người dùng, không tự thay bằng bản master mới nhất:
+https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library/blob/master/src/spo2_algorithm.cpp
+Các tài liệu [1]–[3] hỗ trợ nguyên lý và nhu cầu hiệu chuẩn; không phải
+chứng nhận mô-đun này đã đạt độ chính xác của thiết bị y tế.
+
+4. CÁCH GHÉP VÀO PROJECT KHÁC (PLATFORMIO / ARDUINO ESP32)
+- Chép thư mục lib/ResearchSpO2 vào thư mục lib của project đích.
+- Thêm #include "ResearchSpO2.h".
+- Khai báo một đối tượng static research_spo2::Stream100 spo2;
+- Khi bắt đầu phiên: spo2.reset();
+- Mỗi cặp IR/RED đọc từ FIFO ở 100 Hz: spo2.push(ir, red);
+- Khi kết thúc phiên: auto result = spo2.evaluate(!poorSignal);
+- Chỉ hiển thị result.percent nếu result.valid() = true.
+- Nếu lỗi, hiển thị trạng thái bằng statusText(result.status), không giữ
+  số phần trăm cũ làm kết quả hiện tại.
+Xem examples/Integration.cpp để thấy các hàm nối vào project đích.
+Nếu ứng dụng đo liên tục, có thể evaluate mỗi giây sau khi đủ bốn giây;
+phải tự kiểm tra dữ liệu còn mới, FIFO không mất mẫu và chất lượng hiện tại.
+Mô-đun không có đồng hồ bên trong và không tự phát hiện việc cảm biến ngừng gửi.
+
+Giữ đúng thứ tự tham số: IR trước, RED sau. Hai kênh phải cùng lần lấy mẫu.
+Đưa ADC thô vào mô-đun; không đưa dữ liệu StandardScaler/chuẩn hóa, tín hiệu
+đã loại DC hoặc PLETH một kênh của dataset vào tính SpO₂ bằng thuật toán này.
+100 Hz là tốc độ cặp mẫu THỰC TẾ sau sampleAverage, không chỉ giá trị
+sampleRate cấu hình. Ví dụ cấu hình của project cũ là 100 Hz/average=1.
+Không gọi push() theo vòng loop tùy ý, không đưa lặp một mẫu nhiều lần.
+Nếu thiếu mẫu, FIFO tràn, tháo tay, đổi LED/tần số: reset và thu lại.
+Nếu đã có đúng 100 cặp RAW ở 25 Hz theo thời gian liên tiếp:
+    auto r = research_spo2::calculate25(ir, red, 100, qualityOk);
+Không dùng trực tiếp cho 125 Hz/500 Hz. Chuyển tần số cần xử lý và kiểm
+chứng riêng, không đổi hằng số một cách tùy ý.
+
+Với project hiện tại: phải tính poorSignal trước rồi mới truyền
+!poorSignal vào evaluate. Với dự án khác: cung cấp đánh giá chất lượng
+của dự án đó; tham số này không được mặc định true như thể đã có bộ
+phát hiện nhiễu. Mô-đun chỉ thêm các kiểm tra kỹ thuật cơ bản, chưa có
+bộ đánh giá chất lượng PPG được kiểm chứng và không phân loại bệnh.
+Ngưỡng tiếp xúc IR=10000 kế thừa project cũ, là kinh nghiệm kỹ thuật,
+không phải ngưỡng y khoa. Có thể cấu hình bằng Config; thay đổi cần đo lại.
+ADC 18 bit: giá trị ngoài 0..262143 bị loại, chạm 262143 bị coi bão hòa.
+Không tự ép kết quả về 95–100%, không tự thêm nhãn an toàn/thiếu oxy.
+Status::Ok chỉ có nghĩa qua kiểm tra phần mềm và thuật toán trả kết quả.
+
+5. PHẠM VI TÁI SỬ DỤNG
+Lõi dùng C++11, không dùng heap, Serial, Wi-Fi, FreeRTOS hay Edge Impulse.
+Có mảng thành viên, mảng cục bộ trên stack và vùng làm việc tĩnh của lõi.
+Một Stream100 dùng khoảng 1,2 KB; lời gọi evaluate cần thêm khoảng 1,6 KB
+mảng trên stack cùng overhead. Bố trí stack phù hợp cho task ESP32.
+Lõi Maxim có vùng làm việc dùng chung: KHÔNG gọi đồng thời từ nhiều task.
+Nếu có nhiều người gọi, dùng mutex phía ứng dụng. Không gọi trong ISR.
+Mục tiêu tái sử dụng là ESP32 DevKit V1/ESP32-S3 có kênh RED/IR phù hợp;
+chưa biên dịch bằng toolchain ESP32 và chưa chạy bo mạch trong lần này.
+Project đích chưa được cung cấp nên chưa thể xác nhận tích hợp toàn hệ thống.
+
+6. KIỂM THỬ ĐÃ THỰC HIỆN
+- Biên dịch lõi, wrapper bằng g++ C++11 trên máy tính.
+- AddressSanitizer và UndefinedBehaviorSanitizer: không phát hiện lỗi
+  trong các ca đã chạy. Tắt LeakSanitizer vì môi trường chạy không hỗ trợ.
+- Kiểm tra đầu vào null/sai số mẫu, chưa đủ cửa sổ, reset, dữ liệu phẳng,
+  mất tiếp xúc, ngoài miền ADC, bão hòa và chất lượng ngoài báo lỗi.
+- Kiểm tra một mẫu lỗi nằm tại vị trí bị bỏ khi giảm tần số vẫn bị chặn.
+- Kiểm tra phục hồi khi mẫu lỗi đã ra khỏi cửa sổ bốn giây.
+- Kiểm tra đỉnh bằng phẳng kéo dài tới cuối mảng và 3000 cửa sổ ngẫu nhiên
+  để tìm lỗi truy cập bộ nhớ/tràn số. Đây không phải dữ liệu sinh lý.
+- Phát lại ba phiên, mỗi phiên 6000 mẫu, từ
+  logs/device-monitor-260902-124222.log của project gốc:
+       Phiên       SpO₂ ghi trong log       Mô-đun mới
+         1                99%                    99%
+         2               100%                   100%
+         3                99%                    99%
+  Cả ba có chỉ số 0–5999 và timestamp bước 10 ms. Kết quả Stream100 khớp
+  gọi trực tiếp trên 100 mẫu cuối sau giảm tần số.
+  Replay dùng qualityOk=true để đối chiếu thuật toán, không gán nhãn chất
+  lượng mới. Log gốc ghi đạt điều kiện sàng lọc cho ba phiên này.
+- tests/data chứa bản trích IR/RED để tái lập, không có giá trị thiết bị
+  SpO₂ tham chiếu. HR lõi trả 93/83/78 BPM, khác thuật toán BPM/IBI riêng
+  của project; không dùng HR này để thay detector nhịp tim đã chốt.
+
+Chạy trên Linux có g++:
+    ASAN_OPTIONS=detect_leaks=0 bash tests/run.sh
+Xem TEST_RESULTS.txt. Kiểm thử phần mềm không xác định MAE/RMSE SpO₂.
+
+7. BƯỚC CẦN LÀM TRÊN THIẾT BỊ
+Ghép mô-đun vào project đích, kiểm tra tốc độ lấy mẫu và lỗi FIFO, rồi đo
+đối chiếu đồng thời với máy đo SpO₂ tham chiếu trong điều kiện nghỉ,
+giữ tay ổn định. Lưu cặp kết quả cùng thời điểm, trạng thái và dữ liệu thô.
+Báo cáo sai số và tỷ lệ không có kết quả; không bỏ các lần thất bại khỏi
+báo cáo. Dữ liệu chỉ quanh 97–100% không chứng minh độ chính xác ở vùng thấp.
+Không tự gây thiếu oxy/nhịn thở để tạo dữ liệu hiệu chuẩn. Việc kiểm chứng
+vùng SpO₂ thấp cần quy trình chuyên môn và giám sát phù hợp.
+
+Cách ghi trong báo cáo:
+“Phân hệ SpO₂ sử dụng thuật toán ước tính dựa trên tỷ số thành phần AC/DC
+của tín hiệu PPG đỏ và hồng ngoại, triển khai từ mã nguồn Maxim/SparkFun.
+Mô-đun đã được kiểm thử phần mềm và phát lại dữ liệu; độ chính xác trên
+thiết bị chưa được xác định bằng phép đo đối chiếu.”

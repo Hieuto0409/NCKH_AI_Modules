@@ -1,0 +1,23 @@
+Changes relative to the algorithm shipped in the supplied project:
+- Retain original Maxim copyright and permissive license notices.
+- Package core in research_spo2_core namespace; replace Arduino types/min
+  with standard C++ includes. Move scratch arrays from header to cpp.
+- Support uint32_t input only; AVR 16-bit branch removed.
+- Compute DC subtraction explicitly in signed 32-bit arithmetic.
+- Widen AC*DC products and ratio numerator*100 to int64_t BEFORE multiplying;
+  reject ratios outside nonnegative int32_t representation.
+- Guard i+n_width before accessing the right side of a plateau reaching
+  the final array element. This prevents a potential out-of-bounds read.
+- Keep original valley detector, moving average, AC extraction, ratio
+  aggregation convention and SpO2 lookup table. Do not claim a new calibration.
+- Add a portable public API validating 100 samples, ADC domain, basic contact,
+  clipping, and an explicit externally supplied quality decision.
+- Stream wrapper preserves 100-to-25 Hz selection phase (indices 0,4,...),
+  waits for 400 RAW samples and checks faults on ALL of those raw samples.
+- Outputs default to invalid; no stale cached percent is returned on failure.
+- No AI training, clinical thresholds, sensor driver changes or original
+  project modifications. This is a separately versioned research module.
+
+Numerical safety patches may change outputs on inputs where the original
+code overflowed; identical results on three replay sessions do not establish
+universal bit-for-bit equivalence. Backend remains non-reentrant and private.

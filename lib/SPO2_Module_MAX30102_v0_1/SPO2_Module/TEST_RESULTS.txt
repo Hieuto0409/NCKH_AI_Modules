@@ -1,0 +1,4 @@
+Replay session 1: 99%, HR=93
+Replay session 2: 100%, HR=83
+Replay session 3: 99%, HR=78
+PASS: input/state tests, tail plateau, 3000 random windows, 3 real sessions
