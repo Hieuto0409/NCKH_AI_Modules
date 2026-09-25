@@ -1,0 +1,11 @@
+{
+  "name": "Stress_PPG_60s_model",
+  "version": "1.0.0",
+  "description": "Header-only logistic regression for 60-s PPG stress detection (14 HRV features). Numerical inference only — no raw PPG processing.",
+  "frameworks": "*",
+  "platforms": "*",
+  "build": {
+    "srcDirs": ["."],
+    "includeDir": "."
+  }
+}

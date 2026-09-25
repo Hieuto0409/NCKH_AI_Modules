@@ -1,0 +1,11 @@
+{
+  "name": "ECG_arrhythmia_EI",
+  "version": "1.0.0",
+  "description": "Edge Impulse C++ library for ECG AF/non-AF classification. Project ID 1119067. Input: 9 HRV features (mean_rr+median_rr+sdnn+rmssd+pnn50+cv_rr+iqr_rr+min_rr+max_rr). Output: AF or non-AF.",
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "build": {
+    "srcDirs": ["tflite-model"],
+    "includeDir": "."
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "demo_label": "offline_demo",
+  "generated_at_utc": "20260925T093437Z",
+  "project": "NCKH AI_Moudel_Summary — Health Monitoring offline demo",
+  "warning": "CHUA duoc xac nhan tren phan cung ESP32-S3. Ket qua la kiem tra thuat toan offline. Khong duoc trinh bay la do tren nguoi that.",
+  "branches": {
+    "stress_ppg": {
+      "branch": "Stress PPG",
+      "status": "RESULT_AVAILABLE",
+      "source_file": "lib\\step2_handoff_sqi_v0_1-20260924T133622Z-1-001\\step2_handoff_sqi_v0_1\\raw\\ppg_raw(5).csv",
+      "sample_rate_hz": 25.0,
+      "training_sample_rate_hz": 64.0,
+      "sample_rate_disclaimer": "PPG Step 2 ghi o 25 Hz; model WESAD duoc huan luyen tu 64 Hz. Dac trung HRV (ms) khong phu thuoc vao fs nen duoc tinh. Tuy nhien do chinh xac phat hien dinh PPG co the thap hon so voi du lieu 64 Hz goc.",
+      "qc": {
+        "passed": true,
+        "method": "SQI windows Step 2 + FIFO + peak count",
+        "details": [
+          "SQI Step 2 (ppg_sqi_windows.csv): 23/23 cua so dat ppg_good_v01=True (100.0%) - nguong chap nhan >= 80%",
+          "Quy tac chap nhan 60s: >= 80% cua so SQI 5s lien tuc dat ppg_good_v01=True",
+          "FIFO: 1500/1500 mau hop le, overflow=0",
+          "Peak detection (slot1_raw): 88 nhip phat hien, valid_rr_ratio=0.977"
+        ]
+      },
+      "features": {
+        "mean_hr_bpm": 89.7322483411083,
+        "std_hr_bpm": 5.684106959536013,
+        "min_hr_bpm": 78.94736842105263,
+        "max_hr_bpm": 115.38461538461539,
+        "mean_pp_ms": 671.0588235294117,
+        "median_pp_ms": 680.0,
+        "sdnn_ms": 38.73055670151107,
+        "rmssd_ms": 51.26959555693246,
+        "sdsd_ms": 51.57752382438907,
+        "pnn20_pct": 57.14285714285714,
+        "pnn50_pct": 13.095238095238097,
+        "cvnn": 0.05771559115758137,
+        "beat_count": 88.0,
+        "valid_rr_ratio": 0.9770114942528736
+      },
+      "python_result": {
+        "source": "Python (model.json)",
+        "z": -1.396549906828946,
+        "probability": 0.1983641599538582,
+        "prediction": "baseline"
+      },
+      "cpp_result": {
+        "source": "C++ binary (stress_ppg::infer)",
+        "probability": 0.1983641599538582,
+        "prediction": "baseline",
+        "diff_vs_python": 0.0,
+        "tolerance_check": "PASS"
+      },
+      "limits": "Ket qua chi la kiem tra thuat toan offline; CHUA duoc xac nhan tren MAX30102 that."
+    },
+    "ecg_af_nonaf": {
+      "branch": "ECG AF/non-AF",
+      "status": "TEST_FIXTURE",
+      "source_file": "lib\\step2_handoff_sqi_v0_1-20260924T133622Z-1-001\\step2_handoff_sqi_v0_1\\raw\\ecg_raw(8).csv",
+      "sample_rate_hz": 500.0,
+      "qc": {
+        "passed": true,
+        "details": [
+          "clean_fraction=0.8284 (>=0.80 de dat), adc_invalid=0.0013, rail=0.0013, flat=0.0231"
+        ]
+      },
+      "features_seconds": {
+        "mean_rr": 0.6108888888888888,
+        "median_rr": 0.52,
+        "sdnn": 0.29699682003535177,
+        "rmssd": 0.2529841892292876,
+        "pnn50": 87.5,
+        "cv_rr": 0.48617158608915356,
+        "iqr_rr": 0.33999999999999997,
+        "min_rr": 0.3,
+        "max_rr": 1.26
+      },
+      "features_milliseconds": {
+        "mean_rr": 610.8888888888889,
+        "median_rr": 520.0,
+        "sdnn": 296.99682003535173,
+        "rmssd": 252.9841892292876,
+        "pnn50": 87.5,
+        "cv_rr": 0.4861715860891534,
+        "iqr_rr": 340.0,
+        "min_rr": 300.0,
+        "max_rr": 1260.0
+      },
+      "unit_confirmation": "Don vi xac nhan: RR dung giay (s), pnn50 dung % (phan tram). Can cu: EI scaler mean[0]=0.7669 (mean_rr~0.77s), mean[2]=0.0895 (sdnn~89.5ms), mean[4]=36.01 (pnn50~36% hop ly).",
+      "model_note": "CANH BAO KY THUAT: EI project 1119067 duoc huan luyen tren raw ECG waveform samples (du lieu dien ap), KHONG phai 9 dac trung HRV. Ket qua inference tu 9 dac trung HRV la KHONG co co so ky thuat. Demo nay chi xac nhan API ket noi va trich xuat dac trung; goi model voi du lieu Step 2 nay se cho ket qua sai nghiem trong.",
+      "ecg_fixture_result": {
+        "status": "TEST_FIXTURE",
+        "note": "API ket noi: health_orchestrator::runEcg(float features[9], 9) da bien dich thanh cong trong ca hai firmware environment (esp32-s3-devkitc-1, test_fixture). Inference model EI bi tu choi de tranh ket qua sai nghiem trong (HRV feature != raw ECG waveform). Ket qua fixture duoc xem xet trong pio run -e test_fixture."
+      },
+      "limits": "Ket qua la TEST_FIXTURE (du lieu WESAD); du lieu Step 2 chi dung de trich xuat dac trung."
+    },
+    "spo2": {
+      "branch": "SpO2 (ResearchSpO2 / Stream100)",
+      "status": "RESULT_AVAILABLE",
+      "step2_eligibility": "INELIGIBLE",
+      "step2_reasons": [
+        "Bat dong tan so mau: Step 2 PPG o 25 Hz, ResearchSpO2::Stream100 yeu cau 100 Hz",
+        "Chua dinh danh buoc song: slot0_raw / slot1_raw chua xac minh slot nao la RED, slot nao la IR",
+        "Khong noi suy len 100 Hz va khong truyen tin hieu AC da loc vao pushSpo2() (quy tac bao toan)"
+      ],
+      "replay_test": {
+        "source": "C++ g++ (SPO2_Module test.cpp)",
+        "status": "PASS",
+        "exit_code": 0,
+        "sessions": {
+          "session_1": {
+            "spo2_pct": 99,
+            "hr_bpm": 93,
+            "expected_pct": 99
+          },
+          "session_2": {
+            "spo2_pct": 100,
+            "hr_bpm": 83,
+            "expected_pct": 100
+          },
+          "session_3": {
+            "spo2_pct": 99,
+            "hr_bpm": 78,
+            "expected_pct": 99
+          }
+        },
+        "note": "Du lieu replay 100 Hz tu tests/data/session_N.csv; KHONG phai du lieu cam bien truc tiep."
+      },
+      "limits": "Ket qua replay test la kiem tra thuat toan; khong do tren nguoi that."
+    }
+  },
+  "firmware_builds": {
+    "skipped": "pio khong tim thay trong PATH"
+  }
+}

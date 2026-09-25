@@ -1,0 +1,30 @@
+{
+  "status": "provisional_hardware_sqi_v0.1",
+  "window_seconds": 5.0,
+  "step_seconds": 2.5,
+  "ecg_fs_hz": 500.0,
+  "ppg_fs_hz": 25.0,
+  "thresholds": {
+    "ecg_clean_fraction_min": 0.8,
+    "ecg_adc_invalid_fraction_max": 0.005,
+    "ecg_rail_fraction_max": 0.005,
+    "ecg_flat_ratio_max": 0.05,
+    "ppg_slot0_perfusion_min": 0.001,
+    "ppg_slot1_perfusion_min": 0.0024,
+    "ppg_flat_ratio_max": 0.05,
+    "ppg_min_peaks_per_window": 3,
+    "ppg_fifo_valid_fraction_min": 1.0
+  },
+  "ecg_windows": 49,
+  "ecg_reference_good_windows": 25,
+  "ecg_good_v01_windows": 25,
+  "ppg_windows": 23,
+  "ppg_good_v01_windows": 23,
+  "ppg_contact_flag_available": false,
+  "limitations": [
+    "ECG reference labels use capture hardware flags plus rail/invalid ratios.",
+    "PPG set has no deliberate finger-off negative capture, so PPG thresholds are lower-quantile starting values only.",
+    "slot0_raw and slot1_raw are not renamed Red/IR until a controlled mapping test.",
+    "This is signal-quality gating, not a medical accuracy or diagnosis claim."
+  ]
+}
