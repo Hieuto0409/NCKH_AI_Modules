@@ -1,0 +1,242 @@
+{
+  "demo_label": "offline_demo",
+  "generated_at_utc": "20260925T173743Z",
+  "project": "NCKH AI_Moudel_Summary — Health Monitoring offline demo",
+  "warning": "CHUA duoc xac nhan tren phan cung ESP32-S3. Ket qua la kiem tra thuat toan offline. Khong duoc trinh bay la do tren nguoi that.",
+  "heart_rate_bpm": 88.24,
+  "heart_rate_source": "PPG",
+  "heart_rate_status": "RESULT_AVAILABLE",
+  "heart_rate_reference_label": "Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ",
+  "heart_rate_clinical_sources": [
+    "https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse",
+    "https://www.nhlbi.nih.gov/health/arrhythmias/types"
+  ],
+  "heart_rate_disclaimer": "Ket qua tu du lieu mau Step 2, chua phai phep do truc tiep tren ESP32-S3.",
+  "spo2_reference_thresholds": {
+    "reference_range": "95–100%: Trong khoảng tham khảo",
+    "attention": "93–94%: Cần chú ý",
+    "low_warning": "<= 92%: Cảnh báo SpO₂ thấp",
+    "invalid": "Chưa có kết quả tin cậy"
+  },
+  "branches": {
+    "stress_ppg": {
+      "branch": "Stress PPG",
+      "status": "RESULT_AVAILABLE",
+      "source_file": "lib\\step2_handoff_sqi_v0_1-20260924T133622Z-1-001\\step2_handoff_sqi_v0_1\\raw\\ppg_raw(5).csv",
+      "sample_rate_hz": 25.0,
+      "training_sample_rate_hz": 64.0,
+      "sample_rate_disclaimer": "PPG Step 2 ghi o 25 Hz; model WESAD duoc huan luyen tu 64 Hz. Dac trung HRV (ms) khong phu thuoc vao fs nen duoc tinh. Tuy nhien do chinh xac phat hien dinh PPG co the thap hon so voi du lieu 64 Hz goc.",
+      "qc": {
+        "passed": true,
+        "method": "SQI windows Step 2 + FIFO + peak count",
+        "details": [
+          "SQI Step 2 (ppg_sqi_windows.csv): 23/23 cua so dat ppg_good_v01=True (100.0%) - nguong chap nhan >= 80%",
+          "Quy tac chap nhan 60s: >= 80% cua so SQI 5s lien tuc dat ppg_good_v01=True",
+          "FIFO: 1500/1500 mau hop le, overflow=0",
+          "Peak detection (slot1_raw): 88 nhip phat hien, valid_rr_ratio=0.977"
+        ]
+      },
+      "features": {
+        "mean_hr_bpm": 89.7322483411083,
+        "std_hr_bpm": 5.684106959536013,
+        "min_hr_bpm": 78.94736842105263,
+        "max_hr_bpm": 115.38461538461539,
+        "mean_pp_ms": 671.0588235294117,
+        "median_pp_ms": 680.0,
+        "sdnn_ms": 38.73055670151107,
+        "rmssd_ms": 51.26959555693246,
+        "sdsd_ms": 51.57752382438907,
+        "pnn20_pct": 57.14285714285714,
+        "pnn50_pct": 13.095238095238097,
+        "cvnn": 0.05771559115758137,
+        "beat_count": 88.0,
+        "valid_rr_ratio": 0.9770114942528736
+      },
+      "heart_rate_bpm": 88.24,
+      "heart_rate_source": "PPG",
+      "heart_rate_status": "RESULT_AVAILABLE",
+      "heart_rate_details": {
+        "formula": "60000 / median(valid_ppi_ms)",
+        "median_ppi_ms": 680.0,
+        "median_ppi_ms_raw": 680.0,
+        "raw_bpm": 88.23529411764706,
+        "valid_beat_count": 85,
+        "mean_hr_bpm": 89.73,
+        "reference_label": "Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ",
+        "display_text": "88.24 BPM — Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ",
+        "is_resting_confirmed": false,
+        "context_note": "Nhịp <60 BPM có thể gặp ở người tập luyện hoặc khi ngủ; >100 BPM khi vận động không tự động là bệnh.",
+        "clinical_sources": [
+          "https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse",
+          "https://www.nhlbi.nih.gov/health/arrhythmias/types"
+        ],
+        "disclaimer": "Ket qua tu du lieu mau Step 2, chua phai phep do truc tiep tren ESP32-S3."
+      },
+      "python_result": {
+        "source": "Python (model.json)",
+        "z": -1.396549906828946,
+        "probability": 0.1983641599538582,
+        "prediction": "baseline"
+      },
+      "cpp_result": {
+        "source": "C++ binary (stress_ppg::infer)",
+        "probability": 0.1983641599538582,
+        "prediction": "baseline",
+        "diff_vs_python": 0.0,
+        "tolerance_check": "PASS",
+        "label_match": "PASS"
+      },
+      "limits": "Ket qua chi la kiem tra thuat toan offline; CHUA duoc xac nhan tren MAX30102 that."
+    },
+    "heart_rate_ppg": {
+      "heart_rate_bpm": 88.24,
+      "heart_rate_source": "PPG",
+      "heart_rate_status": "RESULT_AVAILABLE",
+      "reference_label": "Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ",
+      "display_text": "88.24 BPM — Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ",
+      "details": {
+        "formula": "60000 / median(valid_ppi_ms)",
+        "median_ppi_ms": 680.0,
+        "median_ppi_ms_raw": 680.0,
+        "raw_bpm": 88.23529411764706,
+        "valid_beat_count": 85,
+        "mean_hr_bpm": 89.73,
+        "reference_label": "Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ",
+        "display_text": "88.24 BPM — Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ",
+        "is_resting_confirmed": false,
+        "context_note": "Nhịp <60 BPM có thể gặp ở người tập luyện hoặc khi ngủ; >100 BPM khi vận động không tự động là bệnh.",
+        "clinical_sources": [
+          "https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse",
+          "https://www.nhlbi.nih.gov/health/arrhythmias/types"
+        ],
+        "disclaimer": "Ket qua tu du lieu mau Step 2, chua phai phep do truc tiep tren ESP32-S3."
+      },
+      "disclaimer": "Ket qua tu du lieu mau Step 2, chua phai phep do truc tiep tren ESP32-S3."
+    },
+    "ecg_af_nonaf": {
+      "branch": "ECG AF/non-AF",
+      "status": "NOT_READY",
+      "source_file": "lib\\step2_handoff_sqi_v0_1-20260924T133622Z-1-001\\step2_handoff_sqi_v0_1\\raw\\ecg_raw(8).csv",
+      "sample_rate_hz": 500.0,
+      "window_duration_seconds": 30.0,
+      "rr_filter_range_seconds": [
+        0.2,
+        2.0
+      ],
+      "ei_model_metadata": {
+        "sensor_type": "EI_CLASSIFIER_SENSOR_FUSION",
+        "fusion_axes": "mean_rr + median_rr + sdnn + rmssd + pnn50 + cv_rr + iqr_rr + min_rr + max_rr",
+        "label_count": 2,
+        "labels": [
+          "AF",
+          "non-AF"
+        ],
+        "nn_input_frame_size": 9,
+        "note": "Model nhan 9 dac trung HRV (SENSOR_FUSION). Don vi da duoc xac minh tu tap huan luyen (ECG.rar): 7 dac trung giay (s), pnn50 (%), cv_rr (1)."
+      },
+      "qc": {
+        "passed": true,
+        "details": [
+          "Cua so 30s duoc chon: 30.0s den 60.0s (clean_fraction=0.8371, adc_invalid=0.0011, rail=0.0011, flat=0.0209, 14 dinh R, 7 khoang RR hop le [0.2-2.0s])"
+        ]
+      },
+      "features_seconds": {
+        "mean_rr": 0.6682857142857143,
+        "median_rr": 0.64,
+        "sdnn": 0.3102911075563904,
+        "rmssd": 0.27604588990480067,
+        "pnn50": 83.33333333333334,
+        "cv_rr": 0.4643090536329057,
+        "iqr_rr": 0.3389999999999999,
+        "min_rr": 0.38,
+        "max_rr": 1.26
+      },
+      "features_milliseconds": {
+        "mean_rr": 668.2857142857143,
+        "median_rr": 640.0,
+        "sdnn": 310.2911075563904,
+        "rmssd": 276.0458899048007,
+        "pnn50": 83.33333333333334,
+        "cv_rr": 0.46430905363290564,
+        "iqr_rr": 339.0,
+        "min_rr": 380.0,
+        "max_rr": 1260.0
+      },
+      "features_ordered_list": [
+        0.6682857142857143,
+        0.64,
+        0.3102911075563904,
+        0.27604588990480067,
+        83.33333333333334,
+        0.4643090536329057,
+        0.3389999999999999,
+        0.38,
+        1.26
+      ],
+      "unit_status": "ĐÃ XÁC MINH từ tập huấn luyện (ECG.rar): 7 đặc trưng thời gian dùng giây (s); pnn50 dùng %; cv_rr không thứ nguyên. Khớp tham số scaler_mean của model.",
+      "training_vs_demo_note": "Dữ liệu huấn luyện dùng vị trí nhịp từ chú giải .qrs ở 250 Hz; demo tự tìm đỉnh R bằng Pan-Tompkins ở 500 Hz. Khác biệt này được ghi nhận; kết quả demo không dùng để đánh giá độ chính xác trên người thật.",
+      "inference_status": "NOT_READY — Model Edge Impulse xuất dạng MCU/Arduino SDK nhắm đến ESP32-S3 (đã biên dịch thành công trong PlatformIO). Trên PC x86 thiếu runtime TFLite Micro tương thích nên chưa thể thực thi EI inference offline trực tiếp. Giữ NOT_READY theo đúng quy định, không tạo nhãn giả lập hoặc quy tắc tự viết.",
+      "model_compiled": true,
+      "firmware_note": "health_orchestrator::runEcg(float features[9], 9) bien dich thanh cong trong ca hai firmware environment (esp32-s3-devkitc-1, test_fixture). Build firmware KHONG chay inference; chi xac nhan API ket noi.",
+      "limits": "9 dac trung HRV (30s) da trich xuat dung chuan tu ECG Step 2. Chua the goi model EI tren PC do thieu runtime TFLite Micro. Khong tao nhan AF/non-AF bang rule tu viet.",
+      "window_start_second": 30.0
+    },
+    "spo2": {
+      "branch": "SpO2 (ResearchSpO2 / Stream100)",
+      "status": "TEST_FIXTURE",
+      "step2_connection": {
+        "eligible": false,
+        "reasons": [
+          "Bat dong tan so mau: Step 2 PPG o 25 Hz, ResearchSpO2::Stream100 yeu cau 100 Hz",
+          "Chua dinh danh buoc song: slot0_raw / slot1_raw chua xac minh slot nao la RED, slot nao la IR",
+          "Khong noi suy len 100 Hz va khong truyen tin hieu AC da loc vao pushSpo2() (quy tac bao toan)"
+        ]
+      },
+      "module_replay_test": {
+        "source": "C++ g++ (SPO2_Module tests/test.cpp)",
+        "status": "PASS",
+        "exit_code": 0,
+        "sessions": {
+          "session_1": {
+            "spo2_pct": 99,
+            "hr_bpm": 93,
+            "expected_pct": 99,
+            "reference_zone": "Trong khoảng tham khảo",
+            "display_text": "99% — Trong khoảng tham khảo"
+          },
+          "session_2": {
+            "spo2_pct": 100,
+            "hr_bpm": 83,
+            "expected_pct": 100,
+            "reference_zone": "Trong khoảng tham khảo",
+            "display_text": "100% — Trong khoảng tham khảo"
+          },
+          "session_3": {
+            "spo2_pct": 99,
+            "hr_bpm": 78,
+            "expected_pct": 99,
+            "reference_zone": "Trong khoảng tham khảo",
+            "display_text": "99% — Trong khoảng tham khảo"
+          }
+        },
+        "data_source": "tests/data/session_N.csv (replay 100 Hz)",
+        "note": "Ket qua PASS xac nhan thuat toan ResearchSpO2::Stream100 hoat dong dung. KHONG phai phep do tren phan cung hay tren nguoi that."
+      },
+      "limits": "Replay test la kiem tra thuat toan cua module SpO2 bang du lieu 100 Hz co san (tests/data/session_N.csv). KHONG phai phep do tren ESP32-S3 hay tren nguoi that. Ket noi tu du lieu Step 2 CHUA du dieu kien (xem step2_connection).",
+      "clinical_reference": {
+        "source": "MedlinePlus (95-100%); NHS England COVID Oximetry @home (93-94% can chu y, <=92% canh bao thap)",
+        "thresholds": {
+          "reference_range": "95–100%: Trong khoảng tham khảo",
+          "attention": "93–94%: Cần chú ý",
+          "low_warning": "<= 92%: Cảnh báo SpO₂ thấp",
+          "invalid": "Chưa có kết quả tin cậy"
+        },
+        "scope": "Nguoi lon luc nghi, gan muc nuoc bien, khong co muc tieu SpO2 rieng do bac si chi dinh",
+        "disclaimer": "Nhan tham khao cho nguyen mau ky thuat, khong phai chan doan hay nguong an toan tuyet doi."
+      }
+    }
+  },
+  "firmware_builds": {
+    "skipped": "pio khong tim thay trong PATH — chay 'pio run' tu terminal PlatformIO"
+  }
+}

@@ -223,76 +223,96 @@ def process_ecg_offline(csv_path: Path):
             report["rejection_reasons"].append(f"Thieu cot: {col}")
             return report
 
-    raw = df["ecg_raw"].to_numpy(dtype=float)
     fs = 500.0
+    target_samples = int(30.0 * fs) # 15000 mẫu cho cửa sổ 30s theo tập huấn luyện
+    if len(df) < target_samples:
+        report["rejection_reasons"].append(f"Số mẫu ({len(df)}) < {target_samples} cho cửa sổ 30s")
+        return report
 
-    # 1. Kiểm tra phần cứng & QC gates từ calibrate_hardware_sqi.py
-    clean_fraction = float(np.mean((df["leads_off"] == 0) & (df["adc_ok"] == 1)))
-    adc_invalid = float(np.mean(df["adc_ok"] == 0))
-    rail_fraction = float(np.mean((raw <= 10.0) | (raw >= 4085.0)))
-    flat_ratio = float(np.mean(np.diff(raw) == 0))
+    # Quét các ứng viên cửa sổ 30s (bước nhảy 5s) để tìm đoạn sạch đạt QC và có nhiều khoảng RR hợp lệ nhất
+    step_samples = int(5.0 * fs)
+    candidate_starts = list(range(0, len(df) - target_samples + 1, step_samples))
+    if candidate_starts[-1] != (len(df) - target_samples):
+        candidate_starts.append(len(df) - target_samples)
 
-    if clean_fraction < 0.80:
-        report["rejection_reasons"].append(f"clean_fraction ({clean_fraction:.4f}) < 0.80 (tin hieu dut quang hoac ho dien cuc)")
-    if adc_invalid > 0.005:
-        report["rejection_reasons"].append(f"adc_invalid_fraction ({adc_invalid:.4f}) > 0.005")
-    if rail_fraction > 0.005:
-        report["rejection_reasons"].append(f"rail_fraction ({rail_fraction:.4f}) > 0.005 (bao hoa ADC)")
-    if flat_ratio > 0.05:
-        report["rejection_reasons"].append(f"flat_ratio ({flat_ratio:.4f}) > 0.05 (duong bang)")
+    best_candidate = None
+    rejection_notes = []
 
-    if report["rejection_reasons"]:
+    for start_idx in candidate_starts:
+        seg_df = df.iloc[start_idx : start_idx + target_samples]
+        raw = seg_df["ecg_raw"].to_numpy(dtype=float)
+
+        clean_fraction = float(np.mean((seg_df["leads_off"] == 0) & (seg_df["adc_ok"] == 1)))
+        adc_invalid = float(np.mean(seg_df["adc_ok"] == 0))
+        rail_fraction = float(np.mean((raw <= 10.0) | (raw >= 4085.0)))
+        flat_ratio = float(np.mean(np.diff(raw) == 0))
+
+        if clean_fraction < 0.80 or adc_invalid > 0.005 or rail_fraction > 0.005 or flat_ratio > 0.05:
+            rejection_notes.append(f"Cửa sổ {start_idx/fs:.1f}s: QC phần cứng không đạt (clean={clean_fraction:.2f})")
+            continue
+
+        sos_morph = butter(2, [0.5, 40.0], btype="bandpass", fs=fs, output="sos")
+        sos_qrs = butter(2, [5.0, 20.0], btype="bandpass", fs=fs, output="sos")
+        ecg_morph = sosfiltfilt(sos_morph, raw)
+        ecg_qrs = sosfiltfilt(sos_qrs, raw)
+
+        derivative = np.diff(ecg_qrs, prepend=ecg_qrs[0])
+        energy = derivative * derivative
+        width = max(1, int(round(0.15 * fs)))
+        integrated = np.convolve(energy, np.ones(width) / width, mode="same")
+        std_int = float(np.std(integrated))
+
+        if std_int <= 1e-12:
+            rejection_notes.append(f"Cửa sổ {start_idx/fs:.1f}s: Năng lượng QRS quá thấp")
+            continue
+
+        candidates, _ = find_peaks(
+            integrated,
+            height=float(np.median(integrated) + 0.5 * std_int),
+            distance=max(1, int(round(0.25 * fs))),
+            prominence=max(1e-12, 0.05 * std_int),
+        )
+        search = max(1, int(round(0.08 * fs)))
+        peaks = []
+        for cand in candidates:
+            lo = max(0, int(cand) - search)
+            hi = min(len(ecg_morph), int(cand) + search + 1)
+            local = lo + int(np.argmax(np.abs(ecg_morph[lo:hi])))
+            if not peaks or local - peaks[-1] >= int(round(0.25 * fs)):
+                peaks.append(local)
+        peaks = np.asarray(peaks, dtype=int)
+
+        if len(peaks) < 4:
+            rejection_notes.append(f"Cửa sổ {start_idx/fs:.1f}s: Số đỉnh R ({len(peaks)}) < 4")
+            continue
+
+        rr_sec = np.diff(peaks) / fs
+        valid_rr_sec = rr_sec[(rr_sec >= 0.20) & (rr_sec <= 2.0)]
+        if len(valid_rr_sec) < 3:
+            rejection_notes.append(f"Cửa sổ {start_idx/fs:.1f}s: Số khoảng RR hợp lệ ({len(valid_rr_sec)}) < 3")
+            continue
+
+        if best_candidate is None or len(valid_rr_sec) > len(best_candidate["valid_rr_sec"]):
+            best_candidate = {
+                "start_idx": start_idx,
+                "start_second": start_idx / fs,
+                "clean_fraction": clean_fraction,
+                "adc_invalid": adc_invalid,
+                "rail_fraction": rail_fraction,
+                "flat_ratio": flat_ratio,
+                "peaks": peaks,
+                "valid_rr_sec": valid_rr_sec,
+            }
+
+    if best_candidate is None:
+        report["rejection_reasons"] += rejection_notes[:5]
         report["model_refusal_reason"] = "QC phan cung khong dat -> TU CHOI goi model Edge Impulse de tranh suy luan sai"
         return report
 
-    # 2. Pipeline lọc & phát hiện đỉnh R theo process_hardware_offline.py
-    nyq = fs / 2.0
-    sos_morph = butter(2, [0.5, 40.0], btype="bandpass", fs=fs, output="sos")
-    sos_qrs = butter(2, [5.0, 20.0], btype="bandpass", fs=fs, output="sos")
-    ecg_morph = sosfiltfilt(sos_morph, raw)
-    ecg_qrs = sosfiltfilt(sos_qrs, raw)
-
-    # Pan-Tompkins
-    derivative = np.diff(ecg_qrs, prepend=ecg_qrs[0])
-    energy = derivative * derivative
-    width = max(1, int(round(0.15 * fs)))
-    integrated = np.convolve(energy, np.ones(width) / width, mode="same")
-    std_int = float(np.std(integrated))
-
-    if std_int <= 1e-12:
-        report["rejection_reasons"].append("Nang luong QRS qua thap (std <= 1e-12)")
-        return report
-
-    candidates, _ = find_peaks(
-        integrated,
-        height=float(np.median(integrated) + 0.5 * std_int),
-        distance=max(1, int(round(0.25 * fs))),
-        prominence=max(1e-12, 0.05 * std_int),
-    )
-    search = max(1, int(round(0.08 * fs)))
-    peaks = []
-    for cand in candidates:
-        lo = max(0, int(cand) - search)
-        hi = min(len(ecg_morph), int(cand) + search + 1)
-        local = lo + int(np.argmax(np.abs(ecg_morph[lo:hi])))
-        if not peaks or local - peaks[-1] >= int(round(0.25 * fs)):
-            peaks.append(local)
-    peaks = np.asarray(peaks, dtype=int)
-
-    if len(peaks) < 4:
-        report["rejection_reasons"].append(f"So dinh R ({len(peaks)}) < 4 khong du tinh dac trung RR")
-        return report
-
-    # 3. Tính khoảng RR sinh lý (0.3s <= RR <= 2.0s)
-    rr_sec = np.diff(peaks) / fs
-    valid_rr_sec = rr_sec[(rr_sec >= 0.30) & (rr_sec <= 2.0)]
-    if len(valid_rr_sec) < 3:
-        report["rejection_reasons"].append(f"So khoang RR hop le ({len(valid_rr_sec)}) < 3")
-        return report
-
+    valid_rr_sec = best_candidate["valid_rr_sec"]
     valid_rr_ms = valid_rr_sec * 1000.0
 
-    # 4. Tính toán 9 đặc trưng: cả 2 phỏng đoán đơn vị
+    # 4. Tính toán 9 đặc trưng (đơn vị huấn luyện: giây, %, 1)
     diff_sec = np.diff(valid_rr_sec)
     diff_ms = np.diff(valid_rr_ms)
 
@@ -322,14 +342,18 @@ def process_ecg_offline(csv_path: Path):
     report["qc_passed"] = True
     report["features_seconds"] = calc_9(valid_rr_sec, diff_sec, is_ms=False)
     report["features_milliseconds"] = calc_9(valid_rr_ms, diff_ms, is_ms=True)
+    report["unit_status"] = (
+        "ĐÃ XÁC MINH từ tập huấn luyện (ECG.rar bản _B): 7 đặc trưng thời gian dùng giây (s); "
+        "pnn50 dùng %; cv_rr không thứ nguyên. Khớp tham số scaler_mean của model."
+    )
 
     # 5. Đánh giá khả năng gọi mô hình Edge Impulse
-    # Ghi nhận nghiêm túc: metadata.h định nghĩa units: "" (chuỗi rỗng),
-    # không có code huấn luyện gốc của project 1119067 để xác minh đơn vị là s hay ms.
     report["model_invoked"] = False
     report["model_refusal_reason"] = (
-        "CHUA DU CO SO XAC MINH DON VI DAU VAO (s hay ms). "
-        "Moi suy luan luc nay khong co co so ky thuat de dam bao tinh dung dan."
+        "NOT_READY — Model Edge Impulse được xuất dưới dạng thư viện MCU/Arduino nhắm đến ESP32-S3 "
+        "(đã biên dịch thành công trong firmware PlatformIO). "
+        "Môi trường PC x86 thiếu runtime TFLite Micro tương thích nên chưa thể thực thi inference offline trực tiếp. "
+        "Giữ NOT_READY theo đúng quy định, không tạo nhãn giả lập hoặc quy tắc tự viết."
     )
     return report
 

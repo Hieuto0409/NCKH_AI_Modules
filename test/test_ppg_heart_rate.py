@@ -161,6 +161,32 @@ int main() {
         assert False, "C++ computePpgHeartRate test failed"
 
 
+def test_boundary_precision_unrounded():
+    """Ca 6: Kiểm tra bảo toàn độ chính xác BPM đến lúc phân loại (100.004 BPM -> >100, 59.996 BPM -> <60)."""
+    print("[*] Test 6 - Do chinh xac BPM den luc phan loai:")
+    # 100.004 BPM -> median_ppi = 60000 / 100.004
+    ppi_100_004 = [60000.0 / 100.004] * 5
+    r_100 = compute_ppg_bpm_from_ppi(ppi_100_004, sqi_ok=True, min_beats=4, is_resting=True)
+    assert r_100["heart_rate_bpm"] == 100.00, f"Ky vong display 100.00, nhan {r_100['heart_rate_bpm']}"
+    assert abs(r_100["raw_bpm"] - 100.004) < 1e-4, f"Ky vong raw_bpm 100.004, nhan {r_100['raw_bpm']}"
+    assert r_100["reference_label"] == "Cao hơn khoảng tham khảo lúc nghỉ", f"Sai label: {r_100['reference_label']}"
+    print(f"    100.004 BPM -> {r_100['heart_rate_bpm']:.2f} BPM ({r_100['reference_label']}) => PASS")
+
+    # 59.996 BPM -> median_ppi = 60000 / 59.996
+    ppi_59_996 = [60000.0 / 59.996] * 5
+    r_59 = compute_ppg_bpm_from_ppi(ppi_59_996, sqi_ok=True, min_beats=4, is_resting=True)
+    assert r_59["heart_rate_bpm"] == 60.00, f"Ky vong display 60.00, nhan {r_59['heart_rate_bpm']}"
+    assert abs(r_59["raw_bpm"] - 59.996) < 1e-4, f"Ky vong raw_bpm 59.996, nhan {r_59['raw_bpm']}"
+    assert r_59["reference_label"] == "Thấp hơn khoảng tham khảo lúc nghỉ", f"Sai label: {r_59['reference_label']}"
+    print(f"    59.996 BPM  -> {r_59['heart_rate_bpm']:.2f} BPM ({r_59['reference_label']}) => PASS")
+
+    # Step 2 data: is_resting=None
+    r_unknown = compute_ppg_bpm_from_ppi(ppi_100_004, sqi_ok=True, min_beats=4, is_resting=None)
+    assert r_unknown["heart_rate_bpm"] == 100.00
+    assert r_unknown["reference_label"] == "Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ"
+    print(f"    Step 2 unconfirmed context -> {r_unknown['reference_label']} => PASS\n")
+
+
 def main():
     print("=" * 70)
     print("=== KIEM TRA DOC LAP: THUAT TOAN TINH NHIP TIM (BPM) TU PPG ===")
@@ -172,6 +198,7 @@ def main():
     test_insufficient_peaks()
     test_sqi_failure()
     test_cpp_orchestrator_hr()
+    test_boundary_precision_unrounded()
 
     print("=" * 70)
     print("TAT CA CAC CA KIEM TRA NHIP TIM PPG: PASS ✅")

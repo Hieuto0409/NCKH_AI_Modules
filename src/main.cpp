@@ -78,11 +78,10 @@ static const double kStressFixture[stress_ppg::kFeatureCount] = {
 
 // ── Fixture B: ECG AF/non-AF ──────────────────────────────────────────────────
 // Nguồn: giá trị plausible dùng để kiểm tra API biên dịch; không có nhãn xác minh.
-// Không thể báo accuracy từ fixture này.
-// Đơn vị 9 đặc trưng CHƯA xác minh với dữ liệu huấn luyện EI; không gán đơn vị.
-// Thứ tự: mean_rr, median_rr, sdnn, rmssd, pnn50, cv_rr, iqr_rr, min_rr, max_rr
+// Thu tu va don vi 9 dac trung da xac minh tu tap huan luyen ECG.rar: giay (7 dac trung), % (pnn50), 1 (cv_rr).
+// Thu tu: mean_rr, median_rr, sdnn, rmssd, pnn50, cv_rr, iqr_rr, min_rr, max_rr
 static const float kEcgFixture[9] = {
-    0.82f,   // mean_rr  — đơn vị chưa xác minh
+    0.82f,   // mean_rr  — giay (s)
     0.81f,   // median_rr
     0.04f,   // sdnn
     0.03f,   // rmssd
@@ -223,6 +222,9 @@ static void printStressResult(const orchestrator::StressResult& r) {
     Serial.printf("  READY | prob=%.4f | deployment_pred=%s", r.probability, pred);
     if (r.heart_rate_bpm > 0.0) {
         Serial.printf(" | HR(PPG)=%.1f bpm", r.heart_rate_bpm);
+        // Mac dinh chua xac nhan boi canh nghi
+        auto zone = orchestrator::evaluateBpmReference(r.heart_rate_bpm, false);
+        Serial.printf(" [%s]", orchestrator::bpmReferenceText(zone));
     }
     Serial.println();
     Serial.println(F("  [FIXTURE] Nhan that: baseline. Deployment model du doan sai (FP)."));
@@ -242,7 +244,7 @@ static void printEcgResult(const orchestrator::EcgResult& r) {
     Serial.printf("  READY | P(AF)=%.4f | P(non-AF)=%.4f | pred=%s\n",
                   r.prob_af, r.prob_nonaf, r.is_af ? "AF" : "non-AF");
     Serial.println(F("  [FIXTURE] Khong co nhan xac minh — khong tinh accuracy."));
-    Serial.println(F("  [NOTE] Don vi 9 feature chua xac minh voi training data EI."));
+    Serial.println(F("  [NOTE] Don vi 9 feature da xac minh tu ECG.rar: 7 dac trung giay (s), pnn50 (%), cv_rr (1)."));
     Serial.println(F("  [DISCLAIMER] AF/non-AF only. Khong phai chan doan y te."));
 }
 
@@ -254,6 +256,8 @@ static void printSpo2Result(const orchestrator::Spo2Result& r) {
     Serial.printf("  READY | status=%s", research_spo2::statusText(r.detail.status));
     if (r.detail.valid()) {
         Serial.printf(" | SpO2=%d%%", r.detail.percent);
+        auto zone = orchestrator::evaluateSpo2Reference(r.detail.percent, true);
+        Serial.printf(" [%s]", orchestrator::spo2ReferenceText(zone));
         if (r.detail.heartRateValid)
             Serial.printf(" | HR=%d bpm (uoc tinh thuat toan)", r.detail.heartRate);
     }

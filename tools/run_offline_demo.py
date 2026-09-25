@@ -32,13 +32,15 @@ Ràng buộc bảo toàn:
   - Chỉ dùng nhãn "C++ binary" khi binary thực sự chạy thành công
   - Kết quả NOT_READY cho firmware ESP32-S3 (chưa có phần cứng)
 
-Ghi chú ECG (đã xác minh từ model_metadata.h dòng 106):
+Ghi chú ECG (đã xác minh từ model_metadata.h & dữ liệu huấn luyện ECG.rar):
   EI_CLASSIFIER_SENSOR = EI_CLASSIFIER_SENSOR_FUSION
   EI_CLASSIFIER_FUSION_AXES_STRING = "mean_rr + median_rr + sdnn + rmssd + pnn50 +
                                        cv_rr + iqr_rr + min_rr + max_rr"
-  → Model nhận 9 đặc trưng HRV (KHÔNG phải raw ECG waveform).
-  Đơn vị (giây hay ms) chưa xác minh từ dữ liệu huấn luyện gốc;
-  scaler mean trong model_variables.h chỉ là manh mối, không đủ làm bằng chứng.
+  → Model nhận 9 đặc trưng HRV theo thứ tự chuẩn.
+  Đơn vị ĐÃ XÁC MINH từ tập huấn luyện (ECG.rar bản _B):
+    7 đặc trưng thời gian dùng giây (s), pnn50 dùng %, cv_rr không thứ nguyên.
+    Khớp hoàn toàn với tham số scaler_mean của model.
+  Cửa sổ tính toán: 30 giây, dải lọc RR: [0.2, 2.0] giây theo đúng tập huấn luyện.
 """
 
 import sys, os, json, math, subprocess, shutil, time, re
@@ -88,20 +90,26 @@ def _import_science():
     from scipy.signal import butter, find_peaks, sosfiltfilt
     return np, pd, butter, find_peaks, sosfiltfilt
 
-def compute_ppg_bpm_from_ppi(ppi_ms, sqi_ok: bool = True, min_beats: int = 4) -> dict:
+def compute_ppg_bpm_from_ppi(ppi_ms, sqi_ok: bool = True, min_beats: int = 4, is_resting: bool = None) -> dict:
     """
     Tính BPM từ mảng khoảng cách giữa các đỉnh liên tiếp (PPI tính bằng ms).
     Công thức: 60000.0 / median(valid_ppi_ms).
     Quy tắc:
-      - Nếu sqi_ok == False: trả NOT_READY (heart_rate_bpm=None).
-      - Nếu số khoảng nhịp hợp lệ < min_beats: trả NOT_READY (heart_rate_bpm=None).
+      - Giữ giá trị BPM gốc CHƯA LÀM TRÒN (raw_bpm) để so sánh các mốc sinh lý (<60, 60–100, >100).
+      - Chỉ làm tròn số đưa ra màn hình/JSON hiển thị (display_val).
+      - Nếu sqi_ok == False: trả NOT_READY (heart_rate_bpm=None, raw_bpm=None).
+      - Nếu số khoảng nhịp hợp lệ < min_beats: trả NOT_READY (heart_rate_bpm=None, raw_bpm=None).
       - KHÔNG BAO GIỜ trả 0 BPM như nhịp tim đo được.
     """
     import numpy as np
     res = {
         "heart_rate_bpm": None,
+        "raw_bpm": None,
+        "heart_rate_bpm_raw": None,
         "heart_rate_source": "PPG",
         "heart_rate_status": "NOT_READY",
+        "reference_label": "Chưa có kết quả tin cậy",
+        "display_text": "Chưa có kết quả tin cậy",
         "details": {}
     }
     if not sqi_ok:
@@ -113,8 +121,8 @@ def compute_ppg_bpm_from_ppi(ppi_ms, sqi_ok: bool = True, min_beats: int = 4) ->
         res["details"]["reason"] = "Khong co khoang cach dinh (PPI rong)"
         return res
 
-    # Lọc khoảng sinh lý [333.33 ms (180 bpm), 1500.0 ms (40 bpm)]
-    valid = arr[(arr >= 333.33) & (arr <= 1500.0)]
+    # Lọc số hữu hạn và khoảng sinh lý [333.33 ms (180 bpm), 1500.0 ms (40 bpm)]
+    valid = arr[np.isfinite(arr) & (arr >= 333.33) & (arr <= 1500.0)]
     if len(valid) < min_beats:
         res["details"]["reason"] = f"So khoang PPI hop le ({len(valid)}) < nguong toi thieu ({min_beats})"
         return res
@@ -124,17 +132,156 @@ def compute_ppg_bpm_from_ppi(ppi_ms, sqi_ok: bool = True, min_beats: int = 4) ->
         res["details"]["reason"] = "Median PPI <= 0 ms"
         return res
 
-    bpm = float(60000.0 / median_ppi)
-    res["heart_rate_bpm"] = round(bpm, 2)
+    bpm_raw = float(60000.0 / median_ppi)
+    display_bpm = round(bpm_raw, 2)
+    res["heart_rate_bpm"] = display_bpm
+    res["raw_bpm"] = bpm_raw
+    res["heart_rate_bpm_raw"] = bpm_raw
     res["heart_rate_status"] = "RESULT_AVAILABLE"
+
+    # Phân loại dựa trên BPM gốc CHƯA LÀM TRÒN
+    interp = interpret_ppg_bpm(bpm_raw, is_resting=is_resting, is_valid=True)
+    res["reference_label"] = interp["reference_label"]
+    res["display_text"] = interp["display_text"]
+
     res["details"] = {
         "formula": "60000 / median(valid_ppi_ms)",
         "median_ppi_ms": round(median_ppi, 2),
+        "median_ppi_ms_raw": median_ppi,
+        "raw_bpm": bpm_raw,
         "valid_beat_count": int(len(valid)),
         "mean_hr_bpm": round(float(np.mean(60000.0 / valid)), 2),
+        "reference_label": interp["reference_label"],
+        "display_text": interp["display_text"],
+        "is_resting_confirmed": interp.get("is_resting_confirmed", False),
+        "context_note": interp.get("context_note", ""),
+        "clinical_sources": interp.get("sources", []),
         "disclaimer": "Ket qua tu du lieu mau Step 2, chua phai phep do truc tiep tren ESP32-S3."
     }
     return res
+
+
+def interpret_spo2(percent, is_valid: bool = True) -> dict:
+    """
+    Diễn giải chỉ số SpO2 theo ngưỡng tham khảo lâm sàng (MedlinePlus & NHS England):
+      - Sau khi kết quả đã hợp lệ (số hữu hạn trong [0, 100], is_valid=True):
+          95–100%: Trong khoảng tham khảo
+          93–94%:  Cần chú ý
+          <= 92%:  Cảnh báo SpO₂ thấp
+      - Không hợp lệ (None, NaN, Inf, < 0, > 100, is_valid=False):
+          valid=False, percent=None, nhãn: "Chưa có kết quả tin cậy", display_text: "Chưa có kết quả tin cậy"
+    """
+    invalid_res = {
+        "valid": False,
+        "percent": None,
+        "reference_label": "Chưa có kết quả tin cậy",
+        "display_text": "Chưa có kết quả tin cậy",
+        "clinical_sources": "MedlinePlus (95-100%); NHS England COVID Oximetry @home (93-94% cần chú ý, <=92% cảnh báo thấp)",
+        "scope": "Người lớn lúc nghỉ, gần mực nước biển, không có mục tiêu SpO2 riêng do bác sĩ chỉ định",
+        "disclaimer": "Nhãn tham khảo cho nguyên mẫu kỹ thuật, không phải chẩn đoán hay ngưỡng an toàn tuyệt đối."
+    }
+
+    if not is_valid or percent is None:
+        return invalid_res
+
+    try:
+        val = float(percent)
+    except (ValueError, TypeError):
+        return invalid_res
+
+    # Kiểm tra số hữu hạn và dải hợp lệ của module trước khi làm tròn hoặc phân loại
+    if not math.isfinite(val) or val < 0.0 or val > 100.0:
+        return invalid_res
+
+    p = int(round(val))
+    if p < 0 or p > 100:
+        return invalid_res
+
+    if 95 <= p <= 100:
+        label = "Trong khoảng tham khảo"
+    elif 93 <= p <= 94:
+        label = "Cần chú ý"
+    else:  # 0 <= p <= 92
+        label = "Cảnh báo SpO₂ thấp"
+
+    return {
+        "valid": True,
+        "percent": p,
+        "reference_label": label,
+        "display_text": f"{p}% — {label}",
+        "clinical_sources": "MedlinePlus (95-100%); NHS England COVID Oximetry @home (93-94% cần chú ý, <=92% cảnh báo thấp)",
+        "scope": "Người lớn lúc nghỉ, gần mực nước biển, không có mục tiêu SpO2 riêng do bác sĩ chỉ định",
+        "disclaimer": "Nhãn tham khảo cho nguyên mẫu kỹ thuật, không phải chẩn đoán hay ngưỡng an toàn tuyệt đối."
+    }
+
+
+def interpret_ppg_bpm(bpm, is_resting: bool = None, is_valid: bool = True) -> dict:
+    """
+    Diễn giải nhịp tim BPM từ PPG theo chuẩn American Heart Association (AHA) & NHLBI:
+      - Kiểm tra giá trị BPM gốc là số hữu hạn, dương (> 0) trước khi hiển thị.
+      - Dùng giá trị CHƯA LÀM TRÒN để quyết định <60, 60–100, >100; chỉ làm tròn khi in ra.
+        Như vậy 100.004 BPM vẫn thuộc phía >100, dù số hiển thị làm tròn là 100.00.
+      - NaN/Inf/<=0 hoặc is_valid=False: kết quả không hợp lệ (valid=False, bpm=None).
+      - Chỉ gắn nhãn khoảng nhịp lúc nghỉ khi có xác nhận người đo là người lớn đang nghỉ (is_resting=True);
+        dữ liệu Step 2 mặc định ghi "Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ".
+    """
+    invalid_res = {
+        "valid": False,
+        "bpm": None,
+        "reference_label": "Chưa có kết quả tin cậy",
+        "display_text": "Chưa có kết quả tin cậy",
+        "sources": [
+            "https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse",
+            "https://www.nhlbi.nih.gov/health/arrhythmias/types"
+        ],
+        "disclaimer": "Dữ liệu mẫu Step 2, chưa phải đo trực tiếp trên ESP32-S3."
+    }
+
+    if isinstance(bpm, dict):
+        if is_resting is None and "is_resting_confirmed" in bpm:
+            is_resting = bpm["is_resting_confirmed"]
+        if is_valid is True and bpm.get("heart_rate_status") == "NOT_READY":
+            is_valid = False
+        bpm = bpm.get("raw_bpm", bpm.get("heart_rate_bpm_raw", bpm.get("heart_rate_bpm")))
+
+    if not is_valid or bpm is None:
+        return invalid_res
+
+    try:
+        val = float(bpm)
+    except (ValueError, TypeError):
+        return invalid_res
+
+    if not math.isfinite(val) or val <= 0.0:
+        return invalid_res
+
+    # Dùng giá trị chưa làm tròn để quyết định ngưỡng sinh lý
+    if is_resting is True:
+        if val < 60.0:
+            label = "Thấp hơn khoảng tham khảo lúc nghỉ"
+        elif val <= 100.0:
+            label = "Trong khoảng tham khảo lúc nghỉ"
+        else:
+            label = "Cao hơn khoảng tham khảo lúc nghỉ"
+    else:
+        label = "Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ"
+
+    display_val = round(val, 2)
+    return {
+        "valid": True,
+        "bpm": display_val,
+        "raw_bpm": val,
+        "is_resting_confirmed": is_resting is True,
+        "reference_label": label,
+        "display_text": f"{display_val:.2f} BPM — {label}",
+        "context_note": "Nhịp <60 BPM có thể gặp ở người tập luyện hoặc khi ngủ; >100 BPM khi vận động không tự động là bệnh.",
+        "sources": [
+            "https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse",
+            "https://www.nhlbi.nih.gov/health/arrhythmias/types"
+        ],
+        "disclaimer": "Dữ liệu mẫu Step 2, chưa phải phép đo trực tiếp trên ESP32-S3."
+    }
+
 
 def section(title: str):
     print(f"\n{'='*78}")
@@ -301,11 +448,21 @@ def run_stress_branch() -> dict:
     mean_pp = float(np.mean(rr_ms))
 
     # Tái sử dụng khoảng PPI đã tính từ các đỉnh hợp lệ, không chạy thuật toán phát hiện đỉnh thứ hai
-    hr_calc = compute_ppg_bpm_from_ppi(rr_ms, sqi_ok=True, min_beats=40)
+    hr_calc = compute_ppg_bpm_from_ppi(rr_ms, sqi_ok=True, min_beats=40, is_resting=None)
     report["heart_rate_bpm"]     = hr_calc["heart_rate_bpm"]
     report["heart_rate_source"]  = hr_calc["heart_rate_source"]
     report["heart_rate_status"]  = hr_calc["heart_rate_status"]
     report["heart_rate_details"] = hr_calc["details"]
+
+    # Diễn giải lâm sàng tham khảo (AHA / NHLBI) dựa trên BPM gốc CHƯA LÀM TRÒN
+    # Vì dữ liệu mẫu Step 2 không có nhãn xác nhận rõ người đo đang nghỉ, is_resting=None:
+    # Hệ thống hiển thị: "Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ" (không tự suy diễn từ SQI hay Stress)
+    raw_bpm_val = hr_calc.get("raw_bpm", hr_calc["heart_rate_bpm"])
+    hr_interp = interpret_ppg_bpm(raw_bpm_val, is_resting=None, is_valid=(hr_calc["heart_rate_status"] == "RESULT_AVAILABLE"))
+    report["heart_rate_details"]["reference_label"]  = hr_interp["reference_label"]
+    report["heart_rate_details"]["display_text"]     = hr_interp["display_text"]
+    report["heart_rate_details"]["context_note"]     = hr_interp.get("context_note", "")
+    report["heart_rate_details"]["clinical_sources"] = hr_interp.get("sources", [])
 
     feats = {
         "mean_hr_bpm":    float(np.mean(hr)),
@@ -423,21 +580,27 @@ def run_stress_branch() -> dict:
 # ==============================================================================
 def run_ecg_branch() -> dict:
     """
-    Trích xuất 9 đặc trưng HRV từ ECG Step 2 và ghi nhận trạng thái EI model.
+    Trích xuất 9 đặc trưng HRV từ ECG Step 2 (cửa sổ 30 giây, dải RR [0.2, 2.0] giây).
 
-    Metadata đã xác minh từ model_metadata.h (project 1119067):
+    Metadata đã xác minh từ model_metadata.h & dữ liệu huấn luyện (ECG.rar):
       EI_CLASSIFIER_SENSOR         = EI_CLASSIFIER_SENSOR_FUSION
       EI_CLASSIFIER_FUSION_AXES    = mean_rr, median_rr, sdnn, rmssd, pnn50,
                                      cv_rr, iqr_rr, min_rr, max_rr  (9 đặc trưng)
       EI_CLASSIFIER_LABEL_COUNT    = 2  (AF, non-AF)
       EI_CLASSIFIER_NN_INPUT_FRAME_SIZE = 9
+      Đơn vị 9 đặc trưng:
+        7 đặc trưng thời gian (mean_rr, median_rr, sdnn, rmssd, iqr_rr, min_rr, max_rr): giây (s)
+        pnn50: %
+        cv_rr: không thứ nguyên
+        (Khớp hoàn toàn với bảng scaler_mean trong model_variables.h).
 
-    Giới hạn còn lại:
-      Đơn vị (giây hay mili-giây) CHƯA xác minh từ dữ liệu huấn luyện gốc.
-      Scaler mean trong model_variables.h (mean_rr~0.767, sdnn~0.090, pnn50~36.0)
-      là manh mối ủng hộ đơn vị giây+phần_trăm, nhưng không phải bằng chứng
-      từ training data → KHÔNG ghi "đơn vị đã xác nhận" chỉ dựa vào scaler.
-      Trạng thái suy luận AF/non-AF: NOT_READY cho đến khi đơn vị được xác minh.
+    Lưu ý về nguồn gốc dữ liệu:
+      - Dữ liệu huấn luyện dùng vị trí nhịp từ chú giải .qrs ở 250 Hz.
+      - Demo tự phát hiện đỉnh R bằng Pan-Tompkins ở 500 Hz.
+      - Kết quả demo chỉ phục vụ kiểm chứng đường truyền offline, không coi là đánh giá độ chính xác trên người thật.
+      - Model Edge Impulse được xuất dưới dạng thư viện MCU/Arduino nhắm đến ESP32-S3 (đã biên dịch thành công trong firmware PlatformIO).
+        Môi trường PC x86 thiếu runtime TFLite Micro tương thích nên chưa thể thực thi EI inference offline trực tiếp.
+        Giữ NOT_READY, nêu chính xác lý do kỹ thuật và không tạo nhãn giả lập hay quy tắc tự viết.
     """
     np, pd, butter, find_peaks, sosfiltfilt = _import_science()
 
@@ -446,6 +609,8 @@ def run_ecg_branch() -> dict:
         "status": "NOT_READY",
         "source_file": str(ECG_CLEAN_CSV.relative_to(PROJECT_ROOT)),
         "sample_rate_hz": 500.0,
+        "window_duration_seconds": 30.0,
+        "rr_filter_range_seconds": [0.20, 2.0],
         "ei_model_metadata": {
             "sensor_type": "EI_CLASSIFIER_SENSOR_FUSION",
             "fusion_axes": "mean_rr + median_rr + sdnn + rmssd + pnn50 + cv_rr + iqr_rr + min_rr + max_rr",
@@ -454,20 +619,28 @@ def run_ecg_branch() -> dict:
             "nn_input_frame_size": 9,
             "note": (
                 "Model nhan 9 dac trung HRV (SENSOR_FUSION). "
-                "Don vi (giay hay ms) chua xac minh tu du lieu huan luyen goc; "
-                "scaler mean la manh moi, khong phai bang chung chinh thuc."
+                "Don vi da duoc xac minh tu tap huan luyen (ECG.rar): 7 dac trung giay (s), pnn50 (%), cv_rr (1)."
             )
         },
         "qc": {"passed": False, "details": []},
         "features_seconds": {},
         "features_milliseconds": {},
+        "features_ordered_list": [],
         "unit_status": (
-            "CHUA XAC MINH don vi dau vao. "
-            "Manh moi tu scaler mean: mean_rr~0.767 -> kha nang giay (s); "
-            "pnn50~36.0 -> kha nang phan tram (%). "
-            "Can xac minh tu du lieu huan luyen goc truoc khi goi model."
+            "ĐÃ XÁC MINH từ tập huấn luyện (ECG.rar): 7 đặc trưng thời gian dùng giây (s); "
+            "pnn50 dùng %; cv_rr không thứ nguyên. Khớp tham số scaler_mean của model."
         ),
-        "inference_status": "NOT_READY — don vi dau vao chua xac minh",
+        "training_vs_demo_note": (
+            "Dữ liệu huấn luyện dùng vị trí nhịp từ chú giải .qrs ở 250 Hz; "
+            "demo tự tìm đỉnh R bằng Pan-Tompkins ở 500 Hz. Khác biệt này được ghi nhận; "
+            "kết quả demo không dùng để đánh giá độ chính xác trên người thật."
+        ),
+        "inference_status": (
+            "NOT_READY — Model Edge Impulse xuất dạng MCU/Arduino SDK nhắm đến ESP32-S3 "
+            "(đã biên dịch thành công trong PlatformIO). Trên PC x86 thiếu runtime TFLite Micro tương thích "
+            "nên chưa thể thực thi EI inference offline trực tiếp. "
+            "Giữ NOT_READY theo đúng quy định, không tạo nhãn giả lập hoặc quy tắc tự viết."
+        ),
         "model_compiled": True,   # model bien dich duoc trong firmware build
         "firmware_note": (
             "health_orchestrator::runEcg(float features[9], 9) bien dich thanh cong "
@@ -475,9 +648,9 @@ def run_ecg_branch() -> dict:
             "Build firmware KHONG chay inference; chi xac nhan API ket noi."
         ),
         "limits": (
-            "9 dac trung HRV da trich xuat tu ECG Step 2. "
-            "Ket qua AF/non-AF CHUA co vi don vi chua xac minh. "
-            "Khong co ket qua 'TEST_FIXTURE EI' vi demo nay khong thuc su goi EI inference."
+            "9 dac trung HRV (30s) da trich xuat dung chuan tu ECG Step 2. "
+            "Chua the goi model EI tren PC do thieu runtime TFLite Micro. "
+            "Khong tao nhan AF/non-AF bang rule tu viet."
         )
     }
 
@@ -494,76 +667,102 @@ def run_ecg_branch() -> dict:
             report["status"] = "QC_REJECTED"
             return report
 
-    raw = df["ecg_raw"].to_numpy(dtype=float)
     fs = 500.0
-    clean_frac = float(((df["leads_off"]==0) & (df["adc_ok"]==1)).mean())
-    adc_inv    = float((df["adc_ok"]==0).mean())
-    rail_frac  = float(((raw <= 10.0) | (raw >= 4085.0)).mean())
-    flat_ratio = float((np.diff(raw) == 0).mean())
+    target_samples = int(30 * fs) # Cửa sổ 30 giây theo yêu cầu huấn luyện
+    if len(df) < target_samples:
+        report["qc"]["details"].append(f"So mau ({len(df)}) < {target_samples} cho cua so 30s")
+        report["status"] = "QC_REJECTED"
+        return report
 
-    report["qc"]["details"].append(
-        f"clean_fraction={clean_frac:.4f} (>=0.80 de dat), "
-        f"adc_invalid={adc_inv:.4f}, rail={rail_frac:.4f}, flat={flat_ratio:.4f}"
-    )
+    # Quét các ứng viên cửa sổ 30s (bước nhảy 5s) để tìm đoạn sạch đạt QC và có nhiều khoảng RR hợp lệ nhất
+    step_samples = int(5.0 * fs)
+    candidate_starts = list(range(0, len(df) - target_samples + 1, step_samples))
+    if candidate_starts[-1] != (len(df) - target_samples):
+        candidate_starts.append(len(df) - target_samples)
 
-    qc_fail = []
-    if clean_frac < 0.80: qc_fail.append(f"clean_fraction={clean_frac:.4f} < 0.80")
-    if adc_inv > 0.005:   qc_fail.append(f"adc_invalid={adc_inv:.4f} > 0.005")
-    if rail_frac > 0.005: qc_fail.append(f"rail={rail_frac:.4f} > 0.005")
-    if flat_ratio > 0.05: qc_fail.append(f"flat_ratio={flat_ratio:.4f} > 0.05")
+    best_candidate = None
+    rejection_notes = []
 
-    if qc_fail:
-        report["qc"]["details"] += qc_fail
+    for start_idx in candidate_starts:
+        seg_df = df.iloc[start_idx : start_idx + target_samples]
+        raw = seg_df["ecg_raw"].to_numpy(dtype=float)
+        clean_frac = float(((seg_df["leads_off"]==0) & (seg_df["adc_ok"]==1)).mean())
+        adc_inv    = float((seg_df["adc_ok"]==0).mean())
+        rail_frac  = float(((raw <= 10.0) | (raw >= 4085.0)).mean())
+        flat_ratio = float((np.diff(raw) == 0).mean())
+
+        if clean_frac < 0.80 or adc_inv > 0.005 or rail_frac > 0.005 or flat_ratio > 0.05:
+            rejection_notes.append(f"Cửa sổ {start_idx/fs:.1f}s: QC phần cứng không đạt (clean={clean_frac:.2f})")
+            continue
+
+        sos_morph = butter(2, [0.5, 40.0], btype="bandpass", fs=fs, output="sos")
+        sos_qrs   = butter(2, [5.0, 20.0], btype="bandpass", fs=fs, output="sos")
+        ecg_morph = sosfiltfilt(sos_morph, raw)
+        ecg_qrs   = sosfiltfilt(sos_qrs, raw)
+
+        derivative  = np.diff(ecg_qrs, prepend=ecg_qrs[0])
+        energy      = derivative * derivative
+        width       = max(1, int(round(0.15 * fs)))
+        integrated  = np.convolve(energy, np.ones(width)/width, mode="same")
+        std_int     = float(np.std(integrated))
+
+        if std_int <= 1e-12:
+            rejection_notes.append(f"Cửa sổ {start_idx/fs:.1f}s: Năng lượng QRS quá thấp")
+            continue
+
+        candidates, _ = find_peaks(
+            integrated,
+            height=float(np.median(integrated) + 0.5 * std_int),
+            distance=max(1, int(round(0.25 * fs))),
+            prominence=max(1e-12, 0.05 * std_int),
+        )
+        search = max(1, int(round(0.08 * fs)))
+        peaks = []
+        for cand in candidates:
+            lo = max(0, int(cand) - search)
+            hi = min(len(ecg_morph), int(cand) + search + 1)
+            local = lo + int(np.argmax(np.abs(ecg_morph[lo:hi])))
+            if not peaks or local - peaks[-1] >= int(round(0.25 * fs)):
+                peaks.append(local)
+        peaks = np.asarray(peaks, dtype=int)
+
+        if len(peaks) < 4:
+            rejection_notes.append(f"Cửa sổ {start_idx/fs:.1f}s: Số đỉnh R ({len(peaks)}) < 4")
+            continue
+
+        rr_sec = np.diff(peaks) / fs
+        valid_rr = rr_sec[(rr_sec >= 0.20) & (rr_sec <= 2.0)]
+        if len(valid_rr) < 3:
+            rejection_notes.append(f"Cửa sổ {start_idx/fs:.1f}s: Số khoảng RR hợp lệ ({len(valid_rr)}) < 3")
+            continue
+
+        if best_candidate is None or len(valid_rr) > len(best_candidate["valid_rr"]):
+            best_candidate = {
+                "start_idx": start_idx,
+                "start_second": start_idx / fs,
+                "clean_frac": clean_frac,
+                "adc_inv": adc_inv,
+                "rail_frac": rail_frac,
+                "flat_ratio": flat_ratio,
+                "peaks": peaks,
+                "valid_rr": valid_rr,
+            }
+
+    if best_candidate is None:
+        report["qc"]["details"] += rejection_notes[:5]
         report["status"] = "QC_REJECTED"
         return report
 
     report["qc"]["passed"] = True
-
-    # --- Tính khoảng RR từ ECG sạch ---
-    sos_morph = butter(2, [0.5, 40.0], btype="bandpass", fs=fs, output="sos")
-    sos_qrs   = butter(2, [5.0, 20.0], btype="bandpass", fs=fs, output="sos")
-    ecg_morph = sosfiltfilt(sos_morph, raw)
-    ecg_qrs   = sosfiltfilt(sos_qrs, raw)
-
-    derivative  = np.diff(ecg_qrs, prepend=ecg_qrs[0])
-    energy      = derivative * derivative
-    width       = max(1, int(round(0.15 * fs)))
-    integrated  = np.convolve(energy, np.ones(width)/width, mode="same")
-    std_int     = float(np.std(integrated))
-
-    if std_int <= 1e-12:
-        report["qc"]["details"].append("Nang luong QRS qua thap; khong the phat hien dinh R")
-        report["status"] = "QC_REJECTED"
-        return report
-
-    candidates, _ = find_peaks(
-        integrated,
-        height=float(np.median(integrated) + 0.5 * std_int),
-        distance=max(1, int(round(0.25 * fs))),
-        prominence=max(1e-12, 0.05 * std_int),
+    report["window_start_second"] = best_candidate["start_second"]
+    report["qc"]["details"].append(
+        f"Cua so 30s duoc chon: {best_candidate['start_second']:.1f}s den {best_candidate['start_second']+30.0:.1f}s "
+        f"(clean_fraction={best_candidate['clean_frac']:.4f}, adc_invalid={best_candidate['adc_inv']:.4f}, "
+        f"rail={best_candidate['rail_frac']:.4f}, flat={best_candidate['flat_ratio']:.4f}, "
+        f"{len(best_candidate['peaks'])} dinh R, {len(best_candidate['valid_rr'])} khoang RR hop le [0.2-2.0s])"
     )
-    search = max(1, int(round(0.08 * fs)))
-    peaks = []
-    for cand in candidates:
-        lo = max(0, int(cand) - search)
-        hi = min(len(ecg_morph), int(cand) + search + 1)
-        local = lo + int(np.argmax(np.abs(ecg_morph[lo:hi])))
-        if not peaks or local - peaks[-1] >= int(round(0.25 * fs)):
-            peaks.append(local)
-    peaks = np.asarray(peaks, dtype=int)
 
-    if len(peaks) < 4:
-        report["qc"]["details"].append(f"So dinh R ({len(peaks)}) < 4")
-        report["status"] = "QC_REJECTED"
-        return report
-
-    rr_sec = np.diff(peaks) / fs
-    valid_rr = rr_sec[(rr_sec >= 0.30) & (rr_sec <= 2.0)]
-    if len(valid_rr) < 3:
-        report["qc"]["details"].append(f"So khoang RR hop le ({len(valid_rr)}) < 3")
-        report["status"] = "QC_REJECTED"
-        return report
-
+    valid_rr = best_candidate["valid_rr"]
     valid_rr_ms = valid_rr * 1000.0
 
     def calc9(rr, diff, is_ms=False):
@@ -581,11 +780,14 @@ def run_ecg_branch() -> dict:
             "max_rr":    float(np.max(rr)),
         }
 
-    report["features_seconds"]      = calc9(valid_rr,    np.diff(valid_rr),    is_ms=False)
+    f_sec = calc9(valid_rr, np.diff(valid_rr), is_ms=False)
+    report["features_seconds"]      = f_sec
     report["features_milliseconds"]  = calc9(valid_rr_ms, np.diff(valid_rr_ms), is_ms=True)
+    axes_order = ["mean_rr", "median_rr", "sdnn", "rmssd", "pnn50", "cv_rr", "iqr_rr", "min_rr", "max_rr"]
+    report["features_ordered_list"] = [f_sec[k] for k in axes_order]
 
-    # Trạng thái cuối: QC đạt nhưng đơn vị chưa xác minh → NOT_READY cho inference
-    # (không phải TEST_FIXTURE; demo không thực sự chạy EI inference)
+    # Trạng thái cuối: QC đạt, đơn vị đã xác minh (giây, %, 1);
+    # nhưng trên PC x86 thiếu runtime TFLite Micro tương thích -> NOT_READY cho inference (không giả lập kết quả)
     report["status"] = "NOT_READY"
     return report
 
@@ -649,12 +851,29 @@ def run_spo2_branch() -> dict:
         for ln in lines:
             m = re.match(r"Replay session (\d+): (\d+)%, HR=(\d+)", ln)
             if m:
-                sessions[f"session_{m.group(1)}"] = {
-                    "spo2_pct":    int(m.group(2)),
-                    "hr_bpm":      int(m.group(3)),
-                    "expected_pct": [99, 100, 99][int(m.group(1))-1]
+                s_num = int(m.group(1))
+                s_pct = int(m.group(2))
+                s_hr  = int(m.group(3))
+                interp = interpret_spo2(s_pct, is_valid=True)
+                sessions[f"session_{s_num}"] = {
+                    "spo2_pct":       s_pct,
+                    "hr_bpm":         s_hr,
+                    "expected_pct":   [99, 100, 99][s_num - 1],
+                    "reference_zone": interp["reference_label"],
+                    "display_text":   interp["display_text"]
                 }
         replay_ok = (proc.returncode == 0)
+        report["clinical_reference"] = {
+            "source": "MedlinePlus (95-100%); NHS England COVID Oximetry @home (93-94% can chu y, <=92% canh bao thap)",
+            "thresholds": {
+                "reference_range": "95–100%: Trong khoảng tham khảo",
+                "attention":       "93–94%: Cần chú ý",
+                "low_warning":     "<= 92%: Cảnh báo SpO₂ thấp",
+                "invalid":         "Chưa có kết quả tin cậy"
+            },
+            "scope": "Nguoi lon luc nghi, gan muc nuoc bien, khong co muc tieu SpO2 rieng do bac si chi dinh",
+            "disclaimer": "Nhan tham khao cho nguyen mau ky thuat, khong phai chan doan hay nguong an toan tuyet doi."
+        }
         report["module_replay_test"] = {
             "source": "C++ g++ (SPO2_Module tests/test.cpp)",
             "status": "PASS" if replay_ok else "FAIL",
@@ -818,7 +1037,7 @@ def print_summary_table(stress, ecg, spo2, firmware):
     print("    ✅ RESULT_AVAILABLE — có kết quả từ model/thuật toán thực đã chạy")
     print("    🔬 TEST_FIXTURE     — kết quả từ bộ test/replay tích hợp sẵn của module")
     print("    ⚠️  QC_REJECTED      — dữ liệu Step 2 không đạt kiểm tra chất lượng")
-    print("    ❌ NOT_READY        — thiếu điều kiện (đơn vị chưa xác minh / phần cứng thiếu)")
+    print("    ❌ NOT_READY        — thiếu điều kiện (chưa có runtime TFLite Micro trên PC / chưa có ESP32-S3)")
     print("    ➖ SKIPPED          — công cụ (g++/pio) không có trong PATH")
 
 
@@ -847,14 +1066,15 @@ def _hr_result_str(r):
         dt = r.get("heart_rate_details", {})
         med_ppi = dt.get("median_ppi_ms", "?")
         cnt = dt.get("valid_beat_count", "?")
-        return f"{bpm} BPM (trung vị PPI={med_ppi} ms, {cnt} nhịp) [Mẫu Step 2]"
+        lbl = dt.get("reference_label", "")
+        return f"{bpm} BPM (trung vị PPI={med_ppi} ms, {cnt} nhịp) — {lbl} [Mẫu Step 2]"
     reason = r.get("heart_rate_details", {}).get("reason", "Chưa đủ điều kiện")
     return f"NOT_READY — {reason[:60]}"
 
 
 def _ecg_result_str(r):
     if r.get("qc", {}).get("passed"):
-        return "9 dac trung trich xuat OK; suy luan NOT_READY (don vi chua xac minh)"
+        return "9 dac trung (30s, don vi da xac minh: giay/%/1); inference NOT_READY (thieu TFLite Micro tren PC)"
     reasons = r.get("qc", {}).get("details", [])
     return reasons[0][:65] if reasons else r["status"]
 
@@ -863,7 +1083,7 @@ def _spo2_result_str(r):
     rt = r.get("module_replay_test")
     if rt and rt.get("status") == "PASS":
         sessions = rt.get("sessions", {})
-        pcts = [f"S{k[-1]}={v['spo2_pct']}%" for k, v in sorted(sessions.items())]
+        pcts = [f"S{k[-1]}={v['spo2_pct']}% ({v.get('reference_zone','')})" for k, v in sorted(sessions.items())]
         return "SpO2 replay PASS: " + ", ".join(pcts) + "; Step 2 INELIGIBLE"
     if rt and rt.get("status") == "SKIPPED":
         return f"SKIPPED — {rt.get('reason','?')[:50]}"
@@ -895,13 +1115,26 @@ def save_json(stress, ecg, spo2, firmware):
         "heart_rate_bpm": stress.get("heart_rate_bpm"),
         "heart_rate_source": stress.get("heart_rate_source", "PPG"),
         "heart_rate_status": stress.get("heart_rate_status", "NOT_READY"),
+        "heart_rate_reference_label": stress.get("heart_rate_details", {}).get("reference_label"),
+        "heart_rate_clinical_sources": [
+            "https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse",
+            "https://www.nhlbi.nih.gov/health/arrhythmias/types"
+        ],
         "heart_rate_disclaimer": "Ket qua tu du lieu mau Step 2, chua phai phep do truc tiep tren ESP32-S3.",
+        "spo2_reference_thresholds": {
+            "reference_range": "95–100%: Trong khoảng tham khảo",
+            "attention":       "93–94%: Cần chú ý",
+            "low_warning":     "<= 92%: Cảnh báo SpO₂ thấp",
+            "invalid":         "Chưa có kết quả tin cậy"
+        },
         "branches": {
             "stress_ppg": clean(stress),
             "heart_rate_ppg": {
                 "heart_rate_bpm": stress.get("heart_rate_bpm"),
                 "heart_rate_source": stress.get("heart_rate_source", "PPG"),
                 "heart_rate_status": stress.get("heart_rate_status", "NOT_READY"),
+                "reference_label": stress.get("heart_rate_details", {}).get("reference_label"),
+                "display_text": stress.get("heart_rate_details", {}).get("display_text"),
                 "details": stress.get("heart_rate_details", {}),
                 "disclaimer": "Ket qua tu du lieu mau Step 2, chua phai phep do truc tiep tren ESP32-S3."
             },
@@ -1000,7 +1233,9 @@ def _print_stress(r):
         hr_bpm = r.get("heart_rate_bpm")
         hr_dt = r.get("heart_rate_details", {})
         print(f"  Nhịp tim PPG (BPM) : {hr_bpm} BPM  [Công thức: 60000 / median(PPI) = 60000 / {hr_dt.get('median_ppi_ms')} ms, {hr_dt.get('valid_beat_count')} nhịp]")
+        print(f"  Đánh giá tham khảo : {hr_dt.get('reference_label')} (AHA / NHLBI)")
         print(f"  ⚠️  Nguồn nhịp tim    : {r.get('heart_rate_source')} (Dữ liệu mẫu Step 2, chưa phải đo trực tiếp trên ESP32-S3)")
+        print(f"  ℹ️  Lưu ý bối cảnh   : {hr_dt.get('context_note')}")
     else:
         hr_reason = r.get("heart_rate_details", {}).get("reason", "QC khong dat")
         print(f"  Nhịp tim PPG (BPM) : NOT_READY — {hr_reason}")
@@ -1044,7 +1279,14 @@ def _print_spo2(r):
         if st == "PASS":
             for k, v in rt.get("sessions", {}).items():
                 exp = v.get("expected_pct", "?")
-                print(f"    {k}: SpO2={v['spo2_pct']}% (expected {exp}%), HR={v['hr_bpm']} bpm")
+                zone = v.get("reference_zone", "")
+                print(f"    {k}: SpO2={v['spo2_pct']}% [{zone}] (expected {exp}%), HR={v['hr_bpm']} bpm")
+            ref = r.get("clinical_reference", {})
+            if ref:
+                print(f"  ℹ️  Khoảng tham khảo lâm sàng ({ref.get('source')}):")
+                for zk, zv in ref.get("thresholds", {}).items():
+                    print(f"      • {zv}")
+                print(f"      Phạm vi: {ref.get('scope')}")
             print(f"  ℹ️  Nguồn: {rt.get('data_source','')}")
             print(f"  ⚠️  {rt.get('note','')}")
         elif st in ("SKIPPED", "ERROR", "FAIL"):

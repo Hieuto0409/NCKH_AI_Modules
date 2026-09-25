@@ -145,4 +145,63 @@ void        pushSpo2(uint32_t ir, uint32_t red);
 /// Returns NOT_READY until 400 raw pairs (4 s) have been pushed since last reset.
 Spo2Result  evaluateSpo2(bool externalQualityOk);
 
+// ── Quy chuẩn hiển thị tham khảo SpO2 (MedlinePlus & NHS England) ─────────────
+enum class Spo2ReferenceZone {
+    UNKNOWN,           // Chua co ket qua tin cay
+    NORMAL_REFERENCE,  // 95 - 100%: Trong khoang tham khao
+    ATTENTION,         // 93 - 94%: Can chu y
+    LOW_WARNING        // <= 92%: Canh bao SpO2 thap
+};
+
+inline const char* spo2ReferenceText(Spo2ReferenceZone zone) {
+    switch (zone) {
+        case Spo2ReferenceZone::NORMAL_REFERENCE: return "Trong khoang tham khao";
+        case Spo2ReferenceZone::ATTENTION:        return "Can chu y";
+        case Spo2ReferenceZone::LOW_WARNING:      return "Canh bao SpO2 thap";
+        default:                                  return "Chua co ket qua tin cay";
+    }
+}
+
+inline Spo2ReferenceZone evaluateSpo2Reference(double percent, bool valid) {
+    if (!valid || !std::isfinite(percent) || percent < 0.0 || percent > 100.0) {
+        return Spo2ReferenceZone::UNKNOWN;
+    }
+    int p = static_cast<int>(std::round(percent));
+    if (p < 0 || p > 100) return Spo2ReferenceZone::UNKNOWN;
+    if (p >= 95) return Spo2ReferenceZone::NORMAL_REFERENCE;
+    if (p >= 93) return Spo2ReferenceZone::ATTENTION;
+    return Spo2ReferenceZone::LOW_WARNING;
+}
+
+inline Spo2ReferenceZone evaluateSpo2Reference(int percent, bool valid) {
+    return evaluateSpo2Reference(static_cast<double>(percent), valid);
+}
+
+// ── Quy chuẩn hiển thị tham khảo BPM (AHA & NHLBI) ───────────────────────────
+enum class BpmReferenceZone {
+    UNKNOWN_CONTEXT,    // Chua du boi canh danh gia theo nhip luc nghi
+    LOW_RESTING,        // < 60 BPM luc nghi: Thap hon khoang tham khao luc nghi
+    NORMAL_RESTING,     // 60 - 100 BPM luc nghi: Trong khoang tham khao luc nghi
+    HIGH_RESTING        // > 100 BPM luc nghi: Cao hon khoang tham khao luc nghi
+};
+
+inline const char* bpmReferenceText(BpmReferenceZone zone) {
+    switch (zone) {
+        case BpmReferenceZone::LOW_RESTING:    return "Thap hon khoang tham khao luc nghi";
+        case BpmReferenceZone::NORMAL_RESTING: return "Trong khoang tham khao luc nghi";
+        case BpmReferenceZone::HIGH_RESTING:   return "Cao hon khoang tham khao luc nghi";
+        default:                               return "Chua du boi canh de danh gia theo nhip luc nghi";
+    }
+}
+
+inline BpmReferenceZone evaluateBpmReference(double bpm, bool is_resting_confirmed) {
+    if (!is_resting_confirmed || !std::isfinite(bpm) || bpm <= 0.0) {
+        return BpmReferenceZone::UNKNOWN_CONTEXT;
+    }
+    // Su dung gia tri chua lam tron de quyet dinh nguong sinh ly (<60, 60-100, >100)
+    if (bpm < 60.0) return BpmReferenceZone::LOW_RESTING;
+    if (bpm <= 100.0) return BpmReferenceZone::NORMAL_RESTING;
+    return BpmReferenceZone::HIGH_RESTING;
+}
+
 } // namespace orchestrator

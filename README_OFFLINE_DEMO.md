@@ -65,39 +65,60 @@ exit 1 = lỗi kiểm thử thực sự (diff Stress > 1e-9; binary crash; SpO�
   $$\text{BPM} = \frac{60000}{\text{median}(\text{PPI}_{\text{ms}})}$$
   - Phương pháp tổng hợp phiên: Sử dụng **trung vị (median)** của các khoảng PPI sinh lý hợp lệ [333.3 ms – 1500.0 ms], đồng bộ với cách tính `bpm_median` của Step 2 (`process_hardware_offline.py`).
   - Ưu điểm: Loại bỏ nhiễu và các nhịp ngoại tâm thu tốt hơn trung bình số học.
+- **Diễn giải tham khảo lâm sàng (AHA & NHLBI)**:
+  - Khi xác nhận rõ người đo là người lớn đang nghỉ (`is_resting=True`):
+    - `< 60 BPM`: *Thấp hơn khoảng tham khảo lúc nghỉ*
+    - `60–100 BPM`: *Trong khoảng tham khảo lúc nghỉ*
+    - `> 100 BPM`: *Cao hơn khoảng tham khảo lúc nghỉ*
+  - Khi chưa đủ bối cảnh (mặc định cho dữ liệu mẫu Step 2, `is_resting=None`):
+    - Hiển thị nhãn: `Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ`
+    - **Không tự suy diễn trạng thái nghỉ từ SQI hay nhãn Stress**.
 - **Kết quả trên dữ liệu mẫu Step 2**:
   - `heart_rate_bpm = 88.24 BPM` (với trung vị PPI = 680.0 ms, 85 khoảng nhịp hợp lệ).
-  - `heart_rate_source = "PPG"`.
+  - Đánh giá: *Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ*.
   - `heart_rate_status = "RESULT_AVAILABLE"`.
 - **Quy tắc an toàn (QC)**:
   - Chỉ trả kết quả khi vượt qua toàn bộ QC (SQI ≥ 80%, FIFO đầy đủ, ≥ 40 nhịp hợp lệ).
   - Nếu QC không đạt hoặc thiếu đỉnh: trả `NOT_READY` kèm lý do; **tuyệt đối không xuất `0 BPM`** như nhịp tim đo được.
-- **Tuyên bố quan trọng**: Đây là kết quả từ dữ liệu mẫu Step 2, chưa phải phép đo trực tiếp trên phần cứng ESP32-S3. Không gắn nhãn "bình thường / bất thường".
+- **Tuyên bố quan trọng**: Đây là kết quả từ dữ liệu mẫu Step 2, chưa phải phép đo trực tiếp trên phần cứng ESP32-S3.
 
 ### 3.3 ECG AF/non-AF
 
-- **Nguồn dữ liệu**: `raw/ecg_raw(8).csv` (500 Hz, file sạch); `ecg_raw(9).csv` (nhiễu, bị từ chối)  
-- **Model Edge Impulse project 1119067 — đã xác minh từ `model_metadata.h`**:  
-  - `EI_CLASSIFIER_SENSOR = EI_CLASSIFIER_SENSOR_FUSION`  
-  - `EI_CLASSIFIER_FUSION_AXES_STRING`:  
-    `mean_rr + median_rr + sdnn + rmssd + pnn50 + cv_rr + iqr_rr + min_rr + max_rr`  
-    → **Model nhận 9 đặc trưng HRV** (không phải raw ECG waveform)  
-  - Labels: `AF`, `non-AF`; `EI_CLASSIFIER_NN_INPUT_FRAME_SIZE = 9`  
-- **QC cổng phần cứng**: `clean_fraction ≥ 0.80`, `adc_invalid ≤ 0.005`, `rail ≤ 0.005`, `flat ≤ 0.05`  
-- **9 đặc trưng RR** được tính theo cả giây và mili-giây  
-- **Trạng thái: `NOT_READY`** — đơn vị đầu vào (giây hay ms) **chưa xác minh từ dữ liệu huấn luyện gốc**.  
-  Scaler mean (`mean_rr≈0.767`, `sdnn≈0.090`, `pnn50≈36.0`) là manh mối ủng hộ giây+%, nhưng không đủ làm bằng chứng chính thức.  
-  Demo trích xuất đặc trưng OK và model biên dịch được; inference AF/non-AF chưa được gọi trong demo này.
+- **Nguồn dữ liệu**: `raw/ecg_raw(8).csv` (500 Hz, file sạch); `ecg_raw(9).csv` (nhiễu, bị từ chối)
+- **Cấu hình trích xuất**:
+  - Cửa sổ: **30 giây** (15000 mẫu), lọc dải RR trong **[0.2, 2.0] giây**, khớp hoàn toàn với quy trình tạo tập dữ liệu huấn luyện.
+  - Quét cửa sổ ứng viên 30s với bước 5s để chọn đoạn tín hiệu sạch ổn định nhất.
+- **Model Edge Impulse project 1119067 — đã xác minh từ `model_metadata.h` & `ECG.rar`**:
+  - `EI_CLASSIFIER_SENSOR = EI_CLASSIFIER_SENSOR_FUSION`
+  - `EI_CLASSIFIER_FUSION_AXES_STRING`:
+    `mean_rr + median_rr + sdnn + rmssd + pnn50 + cv_rr + iqr_rr + min_rr + max_rr` (9 đặc trưng)
+  - **Đơn vị ĐÃ ĐƯỢC XÁC MINH từ tập huấn luyện gốc (`ECG.rar` bản `_B`)**:
+    - 7 đặc trưng thời gian (`mean_rr`, `median_rr`, `sdnn`, `rmssd`, `iqr_rr`, `min_rr`, `max_rr`): **giây (s)**
+    - `pnn50`: **%**
+    - `cv_rr`: **không thứ nguyên (tỷ lệ)**
+    - Các giá trị trung bình trong tập train khớp hoàn toàn với tham số `scaler_mean` trong `model_variables.h`.
+- **QC cổng phần cứng**: `clean_fraction ≥ 0.80`, `adc_invalid ≤ 0.005`, `rail ≤ 0.005`, `flat ≤ 0.05`
+- **Lưu ý nguồn gốc**: Dữ liệu huấn luyện dùng chú giải `.qrs` ở 250 Hz; demo phát hiện đỉnh R bằng Pan-Tompkins ở 500 Hz.
+- **Trạng thái suy luận: `NOT_READY` (lý do kỹ thuật rõ ràng)**:
+  - Model Edge Impulse được xuất dưới dạng thư viện MCU/Arduino SDK nhắm đến ESP32-S3 (đã biên dịch thành công trong firmware PlatformIO).
+  - Môi trường máy tính x86 thiếu runtime TFLite Micro tương thích nên chưa thể thực thi inference offline trực tiếp.
+  - **Giữ nguyên `NOT_READY`, không tạo nhãn giả lập hoặc quy tắc tự viết**.
 
 ### 3.4 SpO₂
 
-- **Kết nối Step 2 (`CHƯA ĐỦ ĐIỀU KIỆN`)** — ghi trong JSON riêng `step2_connection`:  
-  1. Tần số mẫu: Step 2 PPG ở 25 Hz, `Stream100` yêu cầu 100 Hz  
-  2. Chưa định danh bước sóng: `slot0_raw`/`slot1_raw` chưa xác minh  
-  3. Không nội suy 25 → 100 Hz; không truyền tín hiệu AC đã lọc vào `pushSpo2()`  
-- **Module replay test (độc lập)**: `TEST_FIXTURE`  
-  - Nguồn: `SPO2_Module/tests/data/session_N.csv` (replay 100 Hz)  
-  - Kết quả: Session 1 = 99%, Session 2 = 100%, Session 3 = 99%  
+- **Kết nối Step 2 (`CHƯA ĐỦ ĐIỀU KIỆN`)** — ghi trong JSON riêng `step2_connection`:
+  1. Tần số mẫu: Step 2 PPG ở 25 Hz, `Stream100` yêu cầu 100 Hz
+  2. Chưa định danh bước sóng: `slot0_raw`/`slot1_raw` chưa xác minh
+  3. Không nội suy 25 → 100 Hz; không truyền tín hiệu AC đã lọc vào `pushSpo2()`
+- **Module replay test (độc lập)**: `TEST_FIXTURE`
+  - Nguồn: `SPO2_Module/tests/data/session_N.csv` (replay 100 Hz)
+  - Kết quả: Session 1 = 99%, Session 2 = 100%, Session 3 = 99%
+- **Khoảng tham khảo lâm sàng (MedlinePlus & NHS England COVID Oximetry @home)**:
+  - `95–100%`: Trong khoảng tham khảo
+  - `93–94%`: Cần chú ý
+  - `≤ 92%`: Cảnh báo SpO₂ thấp
+  - Dữ liệu lỗi / không đạt QC: Chưa có kết quả tin cậy
+  - *Áp dụng*: Người lớn lúc nghỉ, gần mực nước biển, không có mục tiêu SpO2 riêng do bác sĩ chỉ định.
 - **Hạn chế**: Replay test xác nhận thuật toán đúng — **không phải đo trên người thật hoặc ESP32-S3**.
 
 ---
@@ -105,7 +126,10 @@ exit 1 = lỗi kiểm thử thực sự (diff Stress > 1e-9; binary crash; SpO�
 ## 4. Kiểm tra bổ sung
 
 ```bash
-# Kiểm tra độc lập thuật toán tính BPM từ PPG (PPI 800 ms -> 75 BPM; thiếu đỉnh / SQI fail)
+# Kiểm tra các quy tắc hiển thị ECG, SpO2 và PPG BPM
+python test/test_interpretation_rules.py
+
+# Kiểm tra độc lập thuật toán tính BPM từ PPG
 python test/test_ppg_heart_rate.py
 
 # Cross-check Python vs C++ Stress PPG (6 fixture WESAD)
@@ -127,10 +151,10 @@ pio run -e test_fixture
 
 | Thiếu | Ghi chú |
 |-------|---------|
-| ESP32-S3 DevKitC-1 | Chưa nạp firmware, chưa có board |
+| ESP32-S3 DevKitC-1 | Chưa nạp firmware, chưa có board thực tế |
 | MAX30102 thực | Cần xác nhận mapping slot RED/IR qua datasheet và thử nghiệm |
 | Tần số mẫu 100 Hz PPG | Cần cấu hình MAX30102 từ 25 Hz → 100 Hz để kết nối SpO₂ |
-| Xác minh đơn vị ECG | Cần kiểm tra training data của EI project 1119067 (giây hay ms) |
+| Runtime TFLite Micro trên PC x86 | Để chạy EI offline trên desktop; hiện model đã sẵn sàng trong firmware ESP32-S3 |
 | Người tình nguyện thực tế | Kiểm chứng lâm sàng nằm ngoài phạm vi đề tài NCKH này |
 
 ---
