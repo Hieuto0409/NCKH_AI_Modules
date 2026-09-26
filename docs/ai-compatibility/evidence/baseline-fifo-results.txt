@@ -1,0 +1,5 @@
+hardware_samples=1 software_available=1
+hardware_samples=3 software_available=3
+hardware_samples=4 software_available=0
+hardware_samples=8 software_available=0
+hardware_samples=31 software_available=3

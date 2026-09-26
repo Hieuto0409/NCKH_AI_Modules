@@ -1,5 +1,25 @@
 # AI_Moudel_Summary — nguyên mẫu phân tích ECG và PPG
 
+## Firmware tích hợp 0.3.0 — cập nhật 27/09/2026
+
+Firmware đã sửa được đưa vào repo này từ [EdgeAI-PPG-Screening, commit 3f2ec90](https://github.com/Hieuto0409/EdgeAI-PPG-Screening/commit/3f2ec90882ea28f3736e76c63514bb2a27d58162), với các phần tách riêng:
+
+- [`firmware/`](firmware/): firmware thiết bị ESP32-S3, thu PPG 200 Hz / ECG mục tiêu 500 Hz, tích hợp Stress, AF/non-AF và SpO₂.
+- [`tin_hieu/`](tin_hieu/): mã xử lý tín hiệu tham khảo độc lập; chưa phải thư viện được liên kết vào firmware tích hợp.
+- [`docs/ai-compatibility/REPAIR_REPORT.md`](docs/ai-compatibility/REPAIR_REPORT.md): các sửa đổi, bằng chứng kiểm thử và việc còn phải đo trên bo.
+
+Build và kiểm thử bản tích hợp từ thư mục `firmware/`:
+
+```bash
+cd firmware
+pio run -e esp32-s3-devkitc-1
+pio test -e native
+```
+
+Trên Windows có đường dẫn Unicode, dùng `powershell -ExecutionPolicy Bypass -File tools/build_windows.ps1` từ `firmware/`. Bản nguồn này đã có bằng chứng 40/40 native test, bốn profile build thành công và suy luận ECG thật trên máy tính. Chưa kiểm chứng toàn bộ trên bo hoặc có golden ECG độc lập. Xem [bàn giao vào repo này](docs/ai-compatibility/REPOSITORY_HANDOFF.md) để biết nguồn và phạm vi.
+
+Các thư mục `src/`, `include/`, `lib/`, `tools/`, `test/` và `platformio.ini` ở gốc vẫn là bộ module/demo AI hiện có. Nội dung phía dưới mô tả bộ demo đó; trạng thái firmware tích hợp được ghi trong báo cáo mới ở trên.
+
 Project PlatformIO cho **ESP32-S3-DevKitC N16R8**, tập hợp bốn đầu ra nghiên cứu từ hai cảm biến dự kiến: Stress từ PPG, nhịp tim PPG (BPM), AF/non-AF từ ECG và SpO₂ từ tín hiệu RED/IR. Trong đó **Stress và AF/non-AF dùng hai mô hình AI riêng**; **BPM và SpO₂ dùng thuật toán**, không phải mô hình AI.
 
 > **Trạng thái bàn giao:** Mã firmware đã được build trong các môi trường PlatformIO của project; demo offline và các bài kiểm tra đi kèm chạy trên dữ liệu mẫu. Chưa có kết quả chạy toàn bộ luồng thu cảm biến, xử lý tín hiệu và suy luận trên bo ESP32-S3 thật. Không dùng đầu ra của nguyên mẫu để chẩn đoán bệnh.

@@ -1,0 +1,1 @@
+one_poll_actual_time_us=10000 adc_reads=6 received=6 dropped=0 assigned_timestamps=0,2000,4000,6000,8000,10000,

@@ -1,0 +1,14 @@
+Firmware 0.3.0 final source SHA-256: 7ca5939c3b68ddd4af1d188bc476cb099721aacb4e5358c1f0d4f75656655510
+Command: ./firmware/tools/build_windows.ps1 -Environment @('esp32-s3-devkitc-1','esp32-s3-devkitc-1-mqtt','esp32-s3-devkitc-1-raw-log','esp32-s3-devkitc-1-fixture')
+All four environments built and linked; no flashing or hardware execution.
+Target compiler: Xtensa GCC 8.4.0; Arduino framework 4.20017.260907+sha.dcc1105b.
+Full build transcript retained locally under firmware/.pio/verification/.
+
+esp32-s3-devkitc-1: SUCCESS; static RAM=80764 bytes; flash=395629 bytes
+firmware.bin SHA-256=a3b43af8b5c8e3ce914be64d05797454f8984c0f2699144c8e9401bed6416547
+esp32-s3-devkitc-1-mqtt: SUCCESS; static RAM=84508 bytes; flash=486765 bytes
+firmware.bin SHA-256=f7e7516ff4173042ea604efd90b71e8b371141ea2bb623027376ba913487d472
+esp32-s3-devkitc-1-raw-log: SUCCESS; static RAM=79084 bytes; flash=374773 bytes
+firmware.bin SHA-256=aeeb01d624d19d9b00af074647d89a3602bab58e449656a5ff08df1c9b6f0985
+esp32-s3-devkitc-1-fixture: SUCCESS; static RAM=22264 bytes; flash=330345 bytes
+firmware.bin SHA-256=6f1ddec50eb11429ec56d9555727017b5409362157fa27c24fe63792cf0aad19

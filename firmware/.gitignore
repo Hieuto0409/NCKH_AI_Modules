@@ -1,0 +1,11 @@
+.pio/
+.pio-core/
+__pycache__/
+*.pyc
+*.binlog
+.vscode/
+.env
+.env.*
+!.env.example
+*.log
+desktop.ini

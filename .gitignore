@@ -3,3 +3,14 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# Integrated firmware build and verification artifacts
+__pycache__/
+*.pyc
+/firmware/.ext/
+/firmware/**/*.bin
+/firmware/**/*.elf
+/firmware/**/*.o
+/firmware/**/*.map
+/audit-results.json
+/ecg-host-results.json

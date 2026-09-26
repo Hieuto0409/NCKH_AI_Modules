@@ -1,0 +1,60 @@
+{
+  "scope": "Synthetic HRV vectors; actual exported ECG inference; no clinical accuracy or independent golden oracle claim",
+  "compiler": "g++ (Rev8, Built by MSYS2 project) 15.2.0",
+  "model_sha256": "d09ae9c81890ef5cba0907cb0980f01167f86d2cdc83fca6cf701aac6d15f6d3",
+  "output_quantization_step": 0.00390625,
+  "probability_sum_tolerance": 0.00390635,
+  "labels": [
+    "AF",
+    "non-AF"
+  ],
+  "vectors": [
+    [
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      0.95,
+      0.95,
+      0.129099445,
+      0.173205081,
+      100,
+      0.13589415,
+      0.15,
+      0.8,
+      1.1
+    ],
+    [
+      0.7,
+      0.65,
+      0.25,
+      0.35,
+      80,
+      0.35714286,
+      0.3,
+      0.3,
+      1.4
+    ]
+  ],
+  "probabilities": [
+    [
+      0.0,
+      0.99609375
+    ],
+    [
+      0.328125,
+      0.671875
+    ],
+    [
+      0.66015625,
+      0.33984375
+    ]
+  ]
+}

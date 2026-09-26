@@ -1,0 +1,110 @@
+Verbosity level can be increased via `-v, -vv, or -vvv` option
+Collected 9 tests
+
+Processing test_acquisition_contract in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test\test_acquisition_contract\test_main.cpp:258: test_ecg_rate_change_selects_most_valid_rr_not_session_average	[PASSED]
+test\test_acquisition_contract\test_main.cpp:259: test_raw_flatline_and_clipping_are_rejected	[PASSED]
+test\test_acquisition_contract\test_main.cpp:260: test_fifo_random_batch_boundaries	[PASSED]
+test\test_acquisition_contract\test_main.cpp:261: test_ecg_queue_overrun_preserves_loss_context	[PASSED]
+test\test_acquisition_contract\test_main.cpp:262: test_state_cancel_restart_has_new_window	[PASSED]
+test\test_acquisition_contract\test_main.cpp:263: test_ecg_boundary_count_jitter_is_not_a_transport_gap	[PASSED]
+test\test_acquisition_contract\test_main.cpp:264: test_fifo_preserves_every_sample_and_order	[PASSED]
+test\test_acquisition_contract\test_main.cpp:265: test_fifo_partial_read_nack_overflow_and_stale_recover	[PASSED]
+test\test_acquisition_contract\test_main.cpp:266: test_adc_delay_never_backfills_historical_samples	[PASSED]
+test\test_acquisition_contract\test_main.cpp:267: test_ppg_poll_jitter_does_not_reset_spo2	[PASSED]
+test\test_acquisition_contract\test_main.cpp:268: test_clock_uses_exact_microsecond_deadline_and_drain	[PASSED]
+test\test_acquisition_contract\test_main.cpp:269: test_ecg_selects_30s_same_window_and_earliest_tie	[PASSED]
+test\test_acquisition_contract\test_main.cpp:270: test_ecg_gap_rejects_without_cross_gap_interval	[PASSED]
+test\test_acquisition_contract\test_main.cpp:271: test_raw_replay_warmup_boundaries_and_gap_gate	[PASSED]
+--------- native:test_acquisition_contract [PASSED] Took 2.12 seconds ---------
+
+Processing test_feature_schema in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test\test_feature_schema\test_main.cpp:65: test_ppg_feature_schema_has_28_fields	[PASSED]
+test\test_feature_schema\test_main.cpp:66: test_normal_requires_all_three_valid_negative_branches	[PASSED]
+test\test_feature_schema\test_main.cpp:67: test_poor_signal_requires_remeasurement	[PASSED]
+test\test_feature_schema\test_main.cpp:68: test_branch_contract_carries_versions_and_modalities	[PASSED]
+test\test_feature_schema\test_main.cpp:69: test_non_af_does_not_imply_normal_rhythm	[PASSED]
+------------ native:test_feature_schema [PASSED] Took 1.12 seconds ------------
+
+Processing test_model_adapters in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test\test_model_adapters\test_main.cpp:124: test_stress_feature_order_matches_pinned_model	[PASSED]
+test\test_model_adapters\test_main.cpp:125: test_stress_adapter_builds_exact_constant_interval_units	[PASSED]
+test\test_model_adapters\test_main.cpp:126: test_stress_model_matches_pinned_python_fixture	[PASSED]
+test\test_model_adapters\test_main.cpp:127: test_ecg_af_adapter_uses_seconds_percent_and_exact_order	[PASSED]
+test\test_model_adapters\test_main.cpp:128: test_model_wrappers_preserve_not_ready_and_quality_rejected	[PASSED]
+------------ native:test_model_adapters [PASSED] Took 1.13 seconds ------------
+
+Processing test_peak_replay in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test\test_peak_replay\test_main.cpp:32: test_periodic_ppg_peaks_are_detected	[PASSED]
+test\test_peak_replay\test_main.cpp:33: test_rpeak_detector_uses_absolute_amplitude	[PASSED]
+-------------- native:test_peak_replay [PASSED] Took 1.14 seconds --------------
+
+Processing test_ring_buffer in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test\test_ring_buffer\test_main.cpp:29: test_fifo_order_and_capacity	[PASSED]
+-------------- native:test_ring_buffer [PASSED] Took 1.14 seconds --------------
+
+Processing test_spo2_math in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test\test_spo2_math\test_main.cpp:48: test_ac_dc_estimator_fixed_vector	[PASSED]
+test\test_spo2_math\test_main.cpp:49: test_spo2_ratio_is_available_but_percent_is_unvalidated	[PASSED]
+test\test_spo2_math\test_main.cpp:50: test_hr_and_hrv_use_intervals	[PASSED]
+--------------- native:test_spo2_math [PASSED] Took 1.14 seconds ---------------
+
+Processing test_spo2_rate_adapter in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test\test_spo2_rate_adapter\test_main.cpp:91: test_800_samples_become_400_pairs_and_four_seconds_ready	[PASSED]
+test\test_spo2_rate_adapter\test_main.cpp:92: test_quality_flag_rejects_complete_window	[PASSED]
+test\test_spo2_rate_adapter\test_main.cpp:93: test_gap_and_overflow_reset_stream	[PASSED]
+test\test_spo2_rate_adapter\test_main.cpp:94: test_sensor_configuration_change_resets_stream	[PASSED]
+----------- native:test_spo2_rate_adapter [PASSED] Took 1.15 seconds -----------
+
+Processing test_sqi in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test\test_sqi\test_main.cpp:49: test_clean_ppg_is_accepted	[PASSED]
+test\test_sqi\test_main.cpp:50: test_clipped_ppg_is_rejected	[PASSED]
+test\test_sqi\test_main.cpp:51: test_lead_off_ecg_is_rejected	[PASSED]
+------------------ native:test_sqi [PASSED] Took 1.19 seconds ------------------
+
+Processing test_timestamp in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test\test_timestamp\test_main.cpp:31: test_fifo_batch_is_backdated_from_poll_time	[PASSED]
+test\test_timestamp\test_main.cpp:32: test_poll_delay_preserves_grid	[PASSED]
+test\test_timestamp\test_main.cpp:33: test_small_poll_delay_preserves_grid	[PASSED]
+--------------- native:test_timestamp [PASSED] Took 1.19 seconds ---------------
+
+=================================== SUMMARY ===================================
+Environment    Test                       Status    Duration
+-------------  -------------------------  --------  ------------
+native         test_acquisition_contract  PASSED    00:00:02.116
+native         test_feature_schema        PASSED    00:00:01.116
+native         test_model_adapters        PASSED    00:00:01.126
+native         test_peak_replay           PASSED    00:00:01.139
+native         test_ring_buffer           PASSED    00:00:01.139
+native         test_spo2_math             PASSED    00:00:01.138
+native         test_spo2_rate_adapter     PASSED    00:00:01.150
+native         test_sqi                   PASSED    00:00:01.193
+native         test_timestamp             PASSED    00:00:01.188
+================= 40 test cases: 40 succeeded in 00:00:11.306 =================

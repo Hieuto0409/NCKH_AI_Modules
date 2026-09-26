@@ -1,0 +1,7 @@
+{
+  "mqtt_bytes": 765,
+  "binary_records": 18,
+  "schema": 2,
+  "feature_schema": 3,
+  "checks": "window/labels/probability/null/clinical flag/binary CRC round-trip passed"
+}

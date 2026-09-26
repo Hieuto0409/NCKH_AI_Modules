@@ -1,0 +1,14 @@
+tests/test_signal_processor
+tests/__pycache__/
+tools/__pycache__/
+*.csv
+tests/test_peak_features
+*.exe
+*.o
+__pycache__/
+*.pyc
+.vscode/
+.env
+.env.*
+!.env.example
+desktop.ini

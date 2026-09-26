@@ -1,0 +1,42 @@
+{
+  "firmware_version": "0.3.0",
+  "runtime_commits": [
+    "398c91b",
+    "49ae13c"
+  ],
+  "tooling_commit": "7ebc65f",
+  "firmware_source_sha256": "7ca5939c3b68ddd4af1d188bc476cb099721aacb4e5358c1f0d4f75656655510",
+  "native_cases_passed": 40,
+  "clinical_validation": false,
+  "board_validation": "NOT RUN",
+  "independent_ecg_golden_comparison": "NOT RUN",
+  "actual_host_ecg_inference": "PASS: 3 synthetic vectors",
+  "serialization": "PASS: production encoders with fake transport, CRC + replay metadata",
+  "limitations_report": "../REPAIR_REPORT.md",
+  "builds": {
+    "esp32-s3-devkitc-1": {
+      "status": "SUCCESS",
+      "static_ram_bytes": 80764,
+      "flash_bytes": 395629,
+      "firmware_bin_sha256": "a3b43af8b5c8e3ce914be64d05797454f8984c0f2699144c8e9401bed6416547"
+    },
+    "esp32-s3-devkitc-1-mqtt": {
+      "status": "SUCCESS",
+      "static_ram_bytes": 84508,
+      "flash_bytes": 486765,
+      "firmware_bin_sha256": "f7e7516ff4173042ea604efd90b71e8b371141ea2bb623027376ba913487d472"
+    },
+    "esp32-s3-devkitc-1-raw-log": {
+      "status": "SUCCESS",
+      "static_ram_bytes": 79084,
+      "flash_bytes": 374773,
+      "firmware_bin_sha256": "aeeb01d624d19d9b00af074647d89a3602bab58e449656a5ff08df1c9b6f0985"
+    },
+    "esp32-s3-devkitc-1-fixture": {
+      "status": "SUCCESS",
+      "static_ram_bytes": 22264,
+      "flash_bytes": 330345,
+      "firmware_bin_sha256": "6f1ddec50eb11429ec56d9555727017b5409362157fa27c24fe63792cf0aad19"
+    }
+  }
+}

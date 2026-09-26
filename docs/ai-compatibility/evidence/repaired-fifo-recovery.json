@@ -1,0 +1,13 @@
+{
+  "before": {
+    "exit_code": 1,
+    "output": "fault=1 recovered_empty_count=32"
+  },
+  "after": {
+    "exit_code": 0,
+    "output": "fault=1 recovered_empty_count=0"
+  },
+  "before_commit": "398c91b",
+  "after_commit": "49ae13c",
+  "regression": "test_fifo_partial_read_nack_overflow_and_stale_recover scenario 3: latched A_FULL + continuity_unknown recovery"
+}

@@ -1,0 +1,28 @@
+{
+  "Stress_PPG_60s_model": {
+    "matching_files": 2,
+    "different_files": [],
+    "not_in_reference": []
+  },
+  "ResearchSpO2": {
+    "matching_files": 5,
+    "different_files": [],
+    "not_in_reference": []
+  },
+  "ECG_arrhythmia_EI": {
+    "matching_files": 1383,
+    "different_files": [],
+    "not_in_reference": []
+  },
+  "stress_numerical_parity": {
+    "windows": 60,
+    "max_absolute_probability_error": 0.0,
+    "label_mismatches_vs_python": 0
+  },
+  "integration_reproductions": [
+    "poll_drift_us=0 samples=800 inferred_gaps=0 resets=0 retained_pairs=400 need_data=0",
+    "poll_drift_us=1 samples=800 inferred_gaps=0 resets=199 retained_pairs=2 need_data=1",
+    "state_machine_finished=1 stress_at_elapsed_59999500us_status=0 stress_at_elapsed_60000000us_status=1 (0=NotReady,1=Ready)",
+    "ecg_60s_mean_rr=0.800000 ecg_last30s_mean_rr=0.666667 ecg_60s_sdnn=0.164399 ecg_last30s_sdnn=0.000000"
+  ]
+}

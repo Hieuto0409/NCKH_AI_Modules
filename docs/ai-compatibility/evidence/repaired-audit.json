@@ -1,0 +1,49 @@
+{
+  "warning": "Observational probes: execution success does not mean defects are fixed.",
+  "project_commit": "398c91bb7567f814061adb5de98438c9f89d612f",
+  "firmware_source_sha256": "7ca5939c3b68ddd4af1d188bc476cb099721aacb4e5358c1f0d4f75656655510",
+  "source_note": "Working-tree source, not necessarily the parent project_commit; digest includes firmware src/include/platformio.ini",
+  "integration_probes": [
+    "poll_drift_us=0 samples=800 inferred_gaps=0 resets=0 retained_pairs=400 need_data=0",
+    "poll_drift_us=1 samples=800 inferred_gaps=0 resets=0 retained_pairs=400 need_data=0",
+    "state_machine_finished=0 stress_at_elapsed_59999500us_status=0 stress_at_elapsed_60000000us_status=1 (0=NotReady,1=Ready)",
+    "ecg_60s_mean_rr=0.800000 ecg_last30s_mean_rr=0.666667 ecg_60s_sdnn=0.164399 ecg_last30s_sdnn=0.000000"
+  ],
+  "ecg_acquisition_probe": [
+    "one_poll_actual_time_us=10000 adc_reads=1 received=1 dropped=5 assigned_timestamps=10000,"
+  ],
+  "models": {
+    "reference_commit": "6f584d6632f08e77a893337f93b2c63ba13fcb1a",
+    "Stress_PPG_60s_model": {
+      "matching_files": 2,
+      "different_files": [],
+      "not_in_reference": []
+    },
+    "ResearchSpO2": {
+      "matching_files": 5,
+      "different_files": [],
+      "not_in_reference": []
+    },
+    "ECG_arrhythmia_EI": {
+      "matching_files": 1383,
+      "different_files": [],
+      "not_in_reference": []
+    },
+    "stress_numerical_parity": {
+      "windows": 60,
+      "max_absolute_probability_error": 0.0,
+      "label_mismatches_vs_python": 0
+    }
+  },
+  "feature_oracle": {
+    "oracle": "AST-extracted calc_9 and Stress feats expressions from offline_data_bridge.py; identical intervals only",
+    "source_sha256": "1ba9b7b1ca62857daa45c6495362afbe20a9088315ca604dd8886bb02d5a085b",
+    "numpy": "2.3.5",
+    "ecg_cases": 10,
+    "ecg_max_absolute_error": 2.432560577858567e-06,
+    "stress_cases": 3,
+    "stress_max_absolute_error": 7.105427357601002e-14,
+    "boundary_policy": "Strict > thresholds preserved; ECG inputs rounded to API float32 before Python comparison"
+  },
+  "fifo": "SKIPPED: no --sparkfun-dir"
+}
