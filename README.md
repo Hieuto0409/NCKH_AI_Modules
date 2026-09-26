@@ -1,930 +1,110 @@
-# NCKH_AI_Modules
+# AI_Moudel_Summary — nguyên mẫu phân tích ECG và PPG
 
-Kho lưu trữ các module AI/Edge AI của đề tài NCKH, bao gồm các mô hình
-và thành phần xử lý tín hiệu dùng trong hệ thống IoT hỗ trợ phân tích
-tín hiệu sinh lý.
+Project PlatformIO cho **ESP32-S3-DevKitC N16R8**, tập hợp bốn đầu ra nghiên cứu từ hai cảm biến dự kiến: Stress từ PPG, nhịp tim PPG (BPM), AF/non-AF từ ECG và SpO₂ từ tín hiệu RED/IR. Trong đó **Stress và AF/non-AF dùng hai mô hình AI riêng**; **BPM và SpO₂ dùng thuật toán**, không phải mô hình AI.
 
-> **Trạng thái hiện tại:** Module **Stress PPG** đã được phục dựng, kiểm
-> tra lại và đóng gói ở mức model/inference. Bước tích hợp tiếp theo là
-> ghép model với module xử lý tín hiệu PPG chung của nhóm trước khi
-> triển khai trên ESP32-S3.
+> **Trạng thái bàn giao:** Mã firmware đã được build trong các môi trường PlatformIO của project; demo offline và các bài kiểm tra đi kèm chạy trên dữ liệu mẫu. Chưa có kết quả chạy toàn bộ luồng thu cảm biến, xử lý tín hiệu và suy luận trên bo ESP32-S3 thật. Không dùng đầu ra của nguyên mẫu để chẩn đoán bệnh.
 
-------------------------------------------------------------------------
+## 1. Sơ đồ xử lý
 
-## 1. Tổng quan hệ thống
-
-Kiến trúc định hướng của hệ thống:
-
-``` text
-Sensors
-  │
-  ├── MAX30102 → Raw PPG
-  │
-  └── AD8232 / ECG → Raw ECG
-           │
-           ▼
-   Signal Processing / SQI
-           │
-           ▼
-   Feature Extraction
-           │
-           ├───────────────┐
-           │               │
-           ▼               ▼
-     Stress Model     Arrhythmia Model
-           │
-           └───────────────┐
-                           ▼
-                     SpO₂ / other
+```mermaid
+flowchart TD
+    A["MAX30102: PPG, RED/IR<br/>AD8232: ECG"] --> B["ESP32-S3: thu nhận, đồng bộ<br/>kiểm tra dữ liệu và điều phối"]
+    B --> C["SpO₂: RED/IR thô 100 Hz<br/>AC/DC → tỷ số → ước tính"]
+    B --> D["PPG 60 giây: SQI → đỉnh xung → PPI"]
+    B --> E["ECG 30 giây: SQI → đỉnh R → RR"]
+    D --> F["14 đặc trưng → AI Stress"]
+    D --> G["Trung vị PPI → BPM"]
+    E --> H["9 đặc trưng → AI AF/non-AF"]
+    C --> I["Tổng hợp kết quả hợp lệ<br/>hiển thị, ghi log, cảnh báo"]
+    F --> I
+    G --> I
+    H --> I
 ```
 
-Đối với **Stress PPG**, pipeline được xác định như sau:
+Nhánh BPM **tái sử dụng PPI** đã tạo từ đỉnh PPG. Đỉnh xung PPG và đỉnh R ECG là hai loại đỉnh khác nhau. Trên hệ thống cuối, nhóm phụ trách xử lý tín hiệu sẽ cung cấp đầu vào đạt chất lượng cho các module; demo offline hiện tự lọc và tìm lại đỉnh từ CSV thô, đồng thời đọc cờ SQI của gói Step 2.
 
-``` text
-MAX30102 / PPG
-      ↓
-Raw PPG
-      ↓
-Module xử lý tín hiệu của nhóm
-      ↓
-Filtering / QC / Peak Detection
-      ↓
-PP / IBI
-      ↓
-14 HR/PRV features
-      ↓
-StandardScaler
-      ↓
-Logistic Regression
-      ↓
-Stress probability
-      ↓
-Threshold = 0.5
-      ↓
-Baseline / Stress
+## 2. Các nhánh và trạng thái thực tế
+
+| Nhánh | Đầu vào và cách tính | Đầu ra | Đã kiểm tra | Việc còn lại |
+|---|---|---|---|---|
+| **Stress PPG** | Cửa sổ 60 giây → PPI/PRV → 14 đặc trưng đúng thứ tự → chuẩn hóa và hồi quy logistic | `baseline`/`stress`, xác suất và cờ hợp lệ | Suy luận Python và C++ trên dữ liệu offline; demo đọc PPG Step 2 khoảng 25 Hz | Đối chiếu trích xuất đặc trưng khi nối bộ xử lý tín hiệu và MAX30102 thật |
+| **BPM từ PPG** | `60.000 / trung vị(PPI hợp lệ tính bằng ms)` | BPM; nhãn nhịp lúc nghỉ chỉ khi xác nhận đúng bối cảnh | Kiểm tra công thức, điều kiện chất lượng và dữ liệu mẫu offline | Nối PPI và SQI từ luồng cảm biến thực |
+| **ECG AF/non-AF** | Cửa sổ 30 giây → RR hợp lệ → 9 đặc trưng → mô hình Edge Impulse | Dự kiến `AF`/`non-AF` và xác suất | Đã xác minh thứ tự/đơn vị 9 đặc trưng; demo trích xuất đặc trưng; firmware build được | **Demo chưa chạy suy luận Edge Impulse**; cần nối ECG thật và kiểm tra model trên bo |
+| **SpO₂** | RED và IR **thô**, còn DC, 100 Hz → AC/DC mỗi kênh → tỷ số và hiệu chuẩn/tra cứu | SpO₂ (%) và cờ hợp lệ | Replay fixture 100 Hz của module trả 99%, 100%, 99% | Step 2 PPG 25 Hz chưa xác định RED/IR nên **chưa nối vào thuật toán**; cần kiểm tra với cảm biến và thiết bị tham chiếu |
+
+**Lưu ý về thuật ngữ:** PPI/PRV là khoảng giữa các **đỉnh xung PPG** và biến thiên của chúng. RR/HRV trong nhánh ECG lấy từ **đỉnh R**; không coi PRV và HRV là cùng một phép đo.
+
+### Stress PPG: 14 đặc trưng theo thứ tự model
+
+`mean_hr_bpm`, `std_hr_bpm`, `min_hr_bpm`, `max_hr_bpm`, `mean_pp_ms`, `median_pp_ms`, `sdnn_ms`, `rmssd_ms`, `sdsd_ms`, `pnn20_pct`, `pnn50_pct`, `cvnn`, `beat_count`, `valid_rr_ratio`.
+
+`stress_ppg_model.h` nhận **vector 14 đặc trưng**; header này không nhận sóng PPG thô. Mô hình học từ BVP 64 Hz của WESAD. Bộ dữ liệu huấn luyện và dữ liệu Step 2 25 Hz khác cảm biến/tần số; kết quả trên WESAD không đại diện cho độ chính xác của MAX30102.
+
+### ECG: 9 đặc trưng theo thứ tự model
+
+`mean_rr`, `median_rr`, `sdnn`, `rmssd`, `pnn50`, `cv_rr`, `iqr_rr`, `min_rr`, `max_rr`.
+
+Bảy đặc trưng thời gian dùng **giây**; `pnn50` dùng **%**; `cv_rr` không có đơn vị. Thứ tự và đơn vị đã được đối chiếu với dữ liệu huấn luyện ECG và tham số chuẩn hóa của model. Dữ liệu huấn luyện dùng vị trí `.qrs` ở 250 Hz; demo xử lý ECG Step 2 ở khoảng 500 Hz và tự tìm đỉnh R. Việc trích xuất đúng số lượng đặc trưng hoặc build firmware **chưa chứng minh đã suy luận AF/non-AF trên bo**. Mô hình chỉ phân loại hai nhãn này, không phát hiện mọi loại rối loạn nhịp.
+
+## 3. Quy tắc hiển thị tham khảo
+
+Chỉ diễn giải **sau khi đầu ra thuật toán và kiểm tra chất lượng hợp lệ**:
+
+| Chỉ số | Giá trị | Nhãn của nguyên mẫu |
+|---|---|---|
+| SpO₂ | 95–100% | Trong khoảng tham khảo |
+| SpO₂ | 93–94% | Cần chú ý |
+| SpO₂ | ≤92% | Cảnh báo SpO₂ thấp |
+| SpO₂ | Thiếu dữ liệu, không hữu hạn, ngoài dải hoặc QC lỗi | Chưa có kết quả tin cậy |
+| BPM ở **người lớn được xác nhận đang nghỉ** | <60 / 60–100 / >100 BPM | Thấp hơn / Trong / Cao hơn khoảng tham khảo lúc nghỉ |
+| BPM khi chưa rõ trạng thái nghỉ | BPM hợp lệ | Hiện số BPM; “Chưa đủ bối cảnh để đánh giá theo nhịp lúc nghỉ” |
+
+Các mốc SpO₂ là **nhãn tham khảo có giới hạn bối cảnh**, không phải chứng nhận một giá trị là “an toàn” cho mọi người. Mốc 93–94% và ≤92% tham khảo hướng dẫn **NHS England COVID Oximetry @home**; người có bệnh phổi, sống ở độ cao hoặc có mục tiêu oxy riêng cần diễn giải theo hướng dẫn phù hợp. Mốc BPM 60–100 áp dụng cho **phần lớn người trưởng thành lúc nghỉ**; vận động, thuốc, giấc ngủ và thể trạng có thể ảnh hưởng nhịp tim. Các nhãn trong project không thay thế đánh giá y tế.
+
+Nguồn: [MedlinePlus — Pulse Oximetry](https://medlineplus.gov/lab-tests/pulse-oximetry/), [NHS England — COVID Oximetry @home](https://www.england.nhs.uk/coronavirus/documents/covid-19-standard-operating-procedure-covid-oximetry-home/), [American Heart Association — All About Heart Rate](https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse).
+
+## 4. Chạy demo và kiểm tra
+
+Mở terminal tại thư mục gốc project (nơi có `platformio.ini`). Cần Python 3, các gói `numpy`, `pandas`, `scipy`, trình biên dịch `g++` trong `PATH` để chạy phần đối chiếu C++/replay; cần PlatformIO CLI nếu muốn build firmware. Công cụ thiếu sẽ được demo báo là bỏ qua, cần đọc **trạng thái từng nhánh** thay vì chỉ nhìn exit code.
+
+```bash
+python tools/run_offline_demo.py
+python test/test_interpretation_rules.py
+python test/test_ppg_heart_rate.py
+python test/verify_stress.py
 ```
 
-### Phân chia trách nhiệm
+Demo in bảng tổng hợp và lưu JSON tại `tools/output/offline_demo_<timestamp>.json`. Kết quả mẫu từng thấy ở gói Step 2: Stress `BASELINE` với xác suất khoảng `0,1984`; nhịp PPG `88,24 BPM` và **chưa đủ bối cảnh đánh giá nhịp lúc nghỉ**. ECG là `NOT_READY` đối với suy luận; SpO₂ là `TEST_FIXTURE` từ bộ replay riêng. Đây là **kết quả mẫu**, không phải giá trị cố định của mọi phiên đo.
 
-**Module xử lý tín hiệu của nhóm trưởng** - Thu nhận Raw PPG. - Lọc tín
-hiệu. - Kiểm tra chất lượng tín hiệu. - Phát hiện pulse peak. - Tính
-PP/IBI. - Tạo các đặc trưng cần thiết.
+Nếu đã cài PlatformIO CLI:
 
-**Module Stress PPG** - Nhận vector 14 feature. - Chuẩn hóa bằng
-StandardScaler. - Chạy Logistic Regression. - Tính xác suất Stress. -
-Phân loại Baseline/Stress.
-
-> `stress_ppg_model.h` **không nhận raw PPG trực tiếp**. Nó nhận 14 đặc
-> trưng đã được trích xuất.
-
-------------------------------------------------------------------------
-
-# 2. Module Stress PPG
-
-## 2.1. Mục tiêu
-
-Xây dựng mô hình Machine Learning phân loại hai trạng thái:
-
--   `Baseline`
--   `Stress`
-
-dựa trên tín hiệu BVP/PPG.
-
-Mô hình được xây dựng và đánh giá trên bộ dữ liệu **WESAD**.
-
-Đây là mô hình nghiên cứu phân loại trạng thái trong dataset, **không
-phải công cụ chẩn đoán y khoa**.
-
-------------------------------------------------------------------------
-
-# 3. Dataset WESAD
-
-Nguồn dữ liệu:
-
-**WESAD -- Wearable Stress and Affect Detection**
-
-Tín hiệu sử dụng trong pipeline Stress PPG:
-
--   Wrist BVP/PPG
--   Sampling rate: **64 Hz**
--   Nguồn: Empatica E4 trong WESAD
--   Nhãn sử dụng:
-    -   Baseline
-    -   Stress
-
-Pipeline HR/PRV chính sử dụng:
-
--   Window: **60 giây**
--   Step: **30 giây**
-
-### Subject-wise split
-
-  ------------------------------------------------------------------------
-  Tập          Subjects          Số cửa sổ        Baseline          Stress
-  ------------ ----------- --------------- --------------- ---------------
-  Train        S2, S3, S4,             224             112             112
-               S5, S6, S7,                                 
-               S9, S10,                                    
-               S11, S15,                                   
-               S17                                         
-
-  Validation   S8, S14                  42              21              21
-
-  Test         S13, S16                 60              30              30
-  ------------------------------------------------------------------------
-
-Tổng cộng pipeline hiện tại có:
-
-**326 cửa sổ**
-
-Cách chia được thực hiện theo **subject**, nhằm tránh cửa sổ của cùng
-một người xuất hiện ở nhiều tập.
-
-Đây là một lần split theo người, không phải leave-one-subject-out và
-không phải đánh giá trên một dataset hoàn toàn độc lập.
-
-------------------------------------------------------------------------
-
-# 4. Phân biệt nhánh dữ liệu 10 giây và pipeline 60 giây
-
-Trong artefact cũ có các script/dataset liên quan đến PPG 10 giây:
-
-``` text
-Stress_WESAD_PPG.rar
-Baseline_WESAD_PPG.rar
-tao_du_lieu_stress_wesad.py
-tao_du_lieu_stress_wesad(1).py
-chia_baseline_stress_theo_subject.py
+```bash
+pio run -e esp32-s3-devkitc-1
+pio run -e test_fixture
 ```
 
-Nhánh này có xử lý:
+Trên Windows, có thể chạy hai lệnh từ terminal của VS Code/PlatformIO. **Build thành công** xác nhận mã biên dịch/liên kết; không chứng minh cảm biến, model ECG hay cảnh báo đã chạy trên phần cứng.
 
-``` text
-64 Hz → 125 Hz
-```
+### Ý nghĩa trạng thái
 
-Tuy nhiên **model Stress HRV chính thức** sử dụng:
+| Trạng thái | Cách hiểu |
+|---|---|
+| `RESULT_AVAILABLE` | Thuật toán/model của nhánh đã chạy với dữ liệu offline đủ điều kiện; chưa xác nhận độ chính xác trên thiết bị cuối |
+| `TEST_FIXTURE` | Kết quả từ bài test/replay có sẵn của module, độc lập với luồng Step 2 |
+| `NOT_READY` | Thiếu điều kiện để đưa ra kết quả của nhánh |
+| `QC_REJECTED` | Dữ liệu không vượt qua điều kiện chất lượng |
+| `SKIPPED` | Một công cụ hoặc bước kiểm tra không sẵn có trong môi trường chạy |
 
-``` text
-tao_dataset_stress_hrv_60s.py
-```
+## 5. Kết quả mô hình Stress trên WESAD
 
-với:
+Pipeline đánh giá dùng các cửa sổ **60 giây**, bước **30 giây**, chia theo người: train 11 người/224 cửa sổ; validation 2 người/42 cửa sổ; test 2 người (S13, S16)/60 cửa sổ. Mô hình *evaluation* huấn luyện từ train đạt **56/60 = 93,33%** trên test. Mô hình *deployment* học từ train + validation, hệ số được nhúng để suy luận, hậu kiểm trên cùng test đạt **58/60 = 96,67%**. Dùng **93,33%** khi trình bày kết quả đánh giá chính; hai con số không phải độ chính xác lâm sàng hoặc độ chính xác trên MAX30102.
 
-``` text
-Window = 60 s
-Step = 30 s
-Sampling rate = 64 Hz
-Không resample trong pipeline HRV 60 s
-```
+## 6. Bàn giao tích hợp tiếp theo
 
-Không được trộn nhánh 10 giây/125 Hz với pipeline 60 giây nếu chưa kiểm
-tra tương thích.
+1. Nối việc thu MAX30102 và AD8232, đồng bộ thời gian, xử lý mất mẫu và cờ chất lượng trong firmware. Chế độ khởi động mặc định có thể trả `NOT_READY` vì chưa có dữ liệu cảm biến.
+2. Chốt ánh xạ LED **RED/IR**, cấp dữ liệu **thô ở 100 Hz có DC** cho SpO₂; không nội suy PPG Step 2 25 Hz thành phép đo 100 Hz hợp lệ.
+3. Nối PPI và 14 đặc trưng PPG **đúng định nghĩa, đơn vị, thứ tự** với model Stress; tái sử dụng PPI hợp lệ cho BPM.
+4. Nối RR và 9 đặc trưng ECG **đúng thứ tự/đơn vị** với model Edge Impulse; ghi log suy luận AF/non-AF thực trên bo trước khi báo cáo kết quả nhánh này.
+5. Chạy kiểm tra trên phần cứng và dữ liệu đo phù hợp; nếu đánh giá độ chính xác SpO₂ thì phải đối chiếu với thiết bị tham chiếu. Ghi riêng kết quả demo, replay, build và kết quả đo thực.
 
-------------------------------------------------------------------------
-
-# 5. Preprocessing Stress PPG
-
-Pipeline hiện tại:
-
-``` text
-WESAD BVP 64 Hz
-      ↓
-Window 60 s
-      ↓
-Quality Control
-      ↓
-Nội suy khoảng lỗi nhỏ nếu hợp lệ
-      ↓
-Butterworth Bandpass
-0.5 – 4 Hz
-      ↓
-Peak Detection
-      ↓
-PP/IBI Cleaning
-      ↓
-14 HR/PRV Features
-```
-
-Các thông số đã được xác minh từ code hiện tại:
-
--   Window: 60 giây = 3840 samples ở 64 Hz.
--   Step: 30 giây.
--   Butterworth bậc 4.
--   Bandpass: 0.5--4 Hz.
--   `sosfiltfilt` được sử dụng.
--   Peak detection dùng `find_peaks`.
--   Xem xét cả cực tính dương và âm.
--   Khoảng cách tối thiểu giữa peak khoảng 1/3 giây.
--   Có kiểm tra prominence.
--   PP/IBI được lọc theo giới hạn sinh lý và theo trung vị.
--   Một cửa sổ cần tối thiểu số peak hợp lệ theo code.
--   `valid_rr_ratio` tối thiểu theo code là 0.65.
-
-Các chi tiết triển khai chính thức phải được lấy từ source code khi tích
-hợp lại với module xử lý tín hiệu của nhóm.
-
-------------------------------------------------------------------------
-
-# 6. PP/IBI và PRV
-
-Trong code, một số biến có tên `rr`, nhưng với tín hiệu PPG chúng biểu
-diễn khoảng giữa các pulse peak.
-
-Do đó về mặt thuật ngữ nên hiểu:
-
-``` text
-PP / IBI
-```
-
-và biến thiên của các khoảng PP được gọi là:
-
-``` text
-PRV – Pulse Rate Variability
-```
-
-Không nên gọi đây là HRV đo trực tiếp từ ECG.
-
-Các chỉ số như SDNN, RMSSD, SDSD... được tính trên các khoảng PP/IBI của
-PPG.
-
-------------------------------------------------------------------------
-
-# 7. 14 đặc trưng của Stress PPG
-
-Model sử dụng đúng **14 feature**, theo đúng thứ tự:
-
-``` text
-1.  mean_hr_bpm
-2.  std_hr_bpm
-3.  min_hr_bpm
-4.  max_hr_bpm
-5.  mean_pp_ms
-6.  median_pp_ms
-7.  sdnn_ms
-8.  rmssd_ms
-9.  sdsd_ms
-10. pnn20_pct
-11. pnn50_pct
-12. cvnn
-13. beat_count
-14. valid_rr_ratio
-```
-
-  Feature            Ý nghĩa                                         Đơn vị
-  ------------------ ----------------------------------------------- ------------------
-  `mean_hr_bpm`      HR trung bình                                   bpm
-  `std_hr_bpm`       Độ lệch chuẩn HR                                bpm
-  `min_hr_bpm`       HR nhỏ nhất                                     bpm
-  `max_hr_bpm`       HR lớn nhất                                     bpm
-  `mean_pp_ms`       PP trung bình                                   ms
-  `median_pp_ms`     PP trung vị                                     ms
-  `sdnn_ms`          Độ lệch chuẩn PP                                ms
-  `rmssd_ms`         Căn trung bình bình phương sai phân liên tiếp   ms
-  `sdsd_ms`          Độ lệch chuẩn sai phân liên tiếp                ms
-  `pnn20_pct`        Tỷ lệ `|Δ| > 20 ms`                             \%
-  `pnn50_pct`        Tỷ lệ `|Δ| > 50 ms`                             \%
-  `cvnn`             SDNN / mean PP                                  Không thứ nguyên
-  `beat_count`       Số pulse peak được phát hiện                    đỉnh
-  `valid_rr_ratio`   PP sạch / PP thô                                tỷ lệ
-
-Công thức chính:
-
-``` text
-HR_i = 60000 / I_i
-
-SDNN = std(I)
-
-RMSSD = sqrt(mean(Δ²))
-
-SDSD = std(Δ)
-
-pNN20 = 100 × mean(|Δ| > 20 ms)
-
-pNN50 = 100 × mean(|Δ| > 50 ms)
-
-CVNN = SDNN / mean(I)
-
-valid_rr_ratio =
-    số PP sau làm sạch / số PP thô
-```
-
-Trong code, độ lệch chuẩn sử dụng sample standard deviation (`ddof=1`).
-
-------------------------------------------------------------------------
-
-# 8. Machine Learning Model
-
-Pipeline:
-
-``` text
-14 HR/PRV features
-        ↓
-StandardScaler
-        ↓
-Logistic Regression
-        ↓
-Probability
-        ↓
-Threshold = 0.5
-        ↓
-Baseline / Stress
-```
-
-Cấu hình:
-
-``` text
-Classifier: Logistic Regression
-C: 0.1
-max_iter: 5000
-random_state: 42
-Threshold: 0.5
-```
-
-Chuẩn hóa:
-
-``` text
-z = (x - μ_train) / scale_train
-```
-
-Trong đó `μ_train` và `scale_train` được học từ training set.
-
-Validation và Test chỉ sử dụng scaler đã fit trên training.
-
-------------------------------------------------------------------------
-
-# 9. Evaluation Model và Deployment Model
-
-Có hai khái niệm cần phân biệt.
-
-## 9.1. Evaluation model
-
-Mục đích:
-
-Đánh giá hiệu năng chính thức.
-
-``` text
-TRAIN
-  ↓
-fit StandardScaler
-  ↓
-fit Logistic Regression
-  ↓
-Validation
-  ↓
-Test
-```
-
-Evaluation model chỉ fit trên Training.
-
-## 9.2. Deployment model
-
-Sau khi hoàn thành đánh giá:
-
-``` text
-TRAIN + VALIDATION
-        ↓
-fit model
-        ↓
-export parameters
-        ↓
-deployment
-```
-
-Các tham số deployment được lưu trong:
-
-``` text
-stress_hrv_deployment_parameters.json
-```
-
-Bao gồm:
-
--   `class_0 = baseline`
--   `class_1 = stress`
--   threshold
--   scaler mean
--   scaler scale
--   Logistic Regression coefficients
--   intercept
--   feature order
-
-------------------------------------------------------------------------
-
-# 10. Kết quả đánh giá chính thức
-
-## Validation
-
-``` text
-42 / 42 đúng
-Accuracy = 100%
-```
-
-Confusion matrix:
-
-``` text
-[[21, 0],
- [ 0,21]]
-```
-
-Các metric:
-
-  Metric                Validation
-  ------------------- ------------
-  Accuracy                    100%
-  Precision Stress            100%
-  Recall Stress               100%
-  F1 Stress                   100%
-  Specificity                 100%
-  Balanced Accuracy           100%
-  ROC-AUC                    1.000
-
-## Test
-
-``` text
-56 / 60 đúng
-Accuracy = 93.33%
-```
-
-Confusion matrix:
-
-``` text
-                Predicted
-              Baseline Stress
-Actual Baseline    26      4
-Actual Stress       0     30
-```
-
-  Metric                  Test
-  ------------------- --------
-  Accuracy              93.33%
-  Precision Stress      88.24%
-  Recall Stress           100%
-  F1 Stress             93.75%
-  Specificity           86.67%
-  Balanced Accuracy     93.33%
-  ROC-AUC                1.000
-
-Diễn giải:
-
--   4 Baseline bị dự đoán nhầm thành Stress.
--   0 Stress bị bỏ sót trong tập test hiện tại.
--   Test gồm hai subject: S13 và S16.
-
-Không được diễn giải 93.33% như độ chính xác trên 60 người.
-
-------------------------------------------------------------------------
-
-# 11. 93.33% và 96.67%
-
-Hai kết quả này phải được giữ riêng.
-
-## 93.33%
-
-Đây là **test accuracy chính thức** của `evaluation_model`.
-
-``` text
-evaluation_model
-→ fit TRAIN
-→ Test
-→ 56/60 = 93.33%
-```
-
-Đây là con số dùng để báo cáo hiệu năng chính thức.
-
-## 96.67%
-
-Sau khi đánh giá, `deployment_model` được fit trên:
-
-``` text
-TRAIN + VALIDATION
-```
-
-Sau đó tham số deployment được áp riêng lên 60 test samples:
-
-``` text
-58/60 = 96.67%
-```
-
-Đây là **deployment verification / hậu kiểm**, không thay thế test
-accuracy chính thức.
-
-Không chọn 96.67% chỉ vì cao hơn.
-
-------------------------------------------------------------------------
-
-# 12. Portable Module
-
-Module portable:
-
-``` text
-Stress_PPG_60s_model_portable.zip
-```
-
-Các thành phần quan trọng gồm:
-
-``` text
-model.json
-stress_ppg_model.h
-stress_hrv_model_deployment.joblib
-stress_hrv_model_evaluation.joblib
-predict.py
-cpp_example.cpp
-train_stress_hrv_60s.py
-tao_dataset_stress_hrv_60s.py
-stress_hrv_features_60s_train.csv
-stress_hrv_features_60s_validation.csv
-stress_hrv_features_60s_test.csv
-stress_hrv_metrics.csv
-README.md
-```
-
-### `stress_ppg_model.h`
-
-Đây là module inference C++.
-
-Input:
-
-``` text
-14 features
-```
-
-Output:
-
-``` text
-Baseline / Stress
-```
-
-Pipeline:
-
-``` text
-14 features
-   ↓
-StandardScaler
-   ↓
-Logistic Regression
-   ↓
-Probability
-   ↓
-Threshold 0.5
-   ↓
-Baseline / Stress
-```
-
-Header này **không xử lý raw PPG**.
-
-------------------------------------------------------------------------
-
-# 13. Định hướng tích hợp với module Signal Processing của nhóm
-
-Đây là hướng triển khai chính thức:
-
-``` text
-MAX30102
-   ↓
-Raw PPG
-   ↓
-Signal Processing module
-   ↓
-Filtering
-   ↓
-Signal Quality / QC
-   ↓
-Peak Detection
-   ↓
-PP / IBI
-   ↓
-14 HR/PRV Features
-   ↓
-stress_ppg_model.h
-   ↓
-StandardScaler
-   ↓
-Logistic Regression
-   ↓
-Stress probability
-   ↓
-Threshold 0.5
-   ↓
-Baseline / Stress
-```
-
-### Phân công module
-
-**Signal Processing module** - Raw PPG - Filtering - QC/SQI - Peak
-detection - PP/IBI - Feature extraction
-
-**Stress PPG AI module** - Nhận 14 features - Scaling - Logistic
-Regression - Probability - Classification
-
-Không cần tạo thêm một bộ filter riêng cho Stress PPG nếu module signal
-processing chung của nhóm đã đảm nhiệm phần đó.
-
-------------------------------------------------------------------------
-
-# 14. Điều kiện để hai module tương thích
-
-Trước khi ghép vào ESP32-S3, cần kiểm tra:
-
--   Sampling rate
--   Window length
--   Window step
--   Filter
--   Filter frequency
--   Peak detection
--   Peak polarity
--   PP/IBI unit
--   Milliseconds conversion
--   Outlier rejection
--   `valid_rr_ratio`
--   Minimum beat count
--   14 feature definition
--   Feature order
--   StandardScaler
--   Logistic Regression parameters
--   Threshold
-
-Đặc biệt cần đảm bảo **14 feature được tính theo đúng định nghĩa và đúng
-thứ tự của model đã train**.
-
-Nếu module signal processing tạo feature khác định nghĩa model cũ, không
-nên chỉ nối trực tiếp.
-
-Cần tạo một lớp adapter hoặc điều chỉnh feature extraction để tương
-thích.
-
-------------------------------------------------------------------------
-
-# 15. ESP32-S3 Deployment
-
-Mục tiêu cuối:
-
-``` text
-MAX30102
-    ↓
-ESP32-S3
-    ↓
-PPG acquisition
-    ↓
-Signal Processing
-    ↓
-14 features
-    ↓
-stress_ppg_model.h
-    ↓
-Baseline / Stress
-```
-
-Hiện tại chưa được tuyên bố:
-
--   realtime
--   thời gian inference
--   RAM usage
--   CPU usage
--   numerical equivalence
--   hiệu năng trên MAX30102
-
-cho tới khi benchmark thực tế trên phần cứng.
-
-------------------------------------------------------------------------
-
-# 16. WESAD và MAX30102
-
-Một điểm bắt buộc phải ghi rõ:
-
-Model được train trên:
-
-``` text
-WESAD wrist BVP / Empatica E4
-```
-
-không phải dữ liệu MAX30102.
-
-Do đó:
-
-``` text
-93.33%
-```
-
-là kết quả trên WESAD.
-
-Không được viết:
-
-> Model đạt 93.33% trên MAX30102.
-
-Muốn xác nhận hiệu năng trên MAX30102 cần có:
-
-``` text
-MAX30102 data
-    ↓
-Signal Processing
-    ↓
-14 features
-    ↓
-Stress Model
-    ↓
-Evaluation
-```
-
-------------------------------------------------------------------------
-
-# 17. Hạn chế
-
-Các hạn chế hiện tại:
-
-1.  WESAD chỉ có 15 subjects.
-2.  Test chỉ có 2 subjects.
-3.  Các cửa sổ có thể chồng lấn.
-4.  Không thể xem 60 cửa sổ là 60 người độc lập.
-5.  Đây không phải leave-one-subject-out.
-6.  Chưa có external dataset validation.
-7.  BVP của Empatica E4 khác tín hiệu từ MAX30102.
-8.  Chưa có bằng chứng end-to-end trên MAX30102.
-9.  Chưa có clinical validation.
-10. Nhãn Baseline/Stress của WESAD là nhãn trạng thái theo protocol
-    nghiên cứu, không phải chẩn đoán lâm sàng.
-
-------------------------------------------------------------------------
-
-# 18. Các artefact đã xác minh
-
-### Pipeline chính
-
-``` text
-tao_dataset_stress_hrv_60s.py
-train_stress_hrv_60s.py
-```
-
-### Dataset feature
-
-``` text
-stress_hrv_features_60s_train.csv
-stress_hrv_features_60s_validation.csv
-stress_hrv_features_60s_test.csv
-```
-
-### Deployment
-
-``` text
-stress_hrv_deployment_parameters.json
-stress_hrv_model_deployment.joblib
-stress_ppg_model.h
-model.json
-```
-
-### Inference
-
-``` text
-predict.py
-cpp_example.cpp
-```
-
-### Artefact liên quan
-
-``` text
-tao_du_lieu_stress_wesad.py
-tao_du_lieu_stress_wesad(1).py
-chia_baseline_stress_theo_subject.py
-Stress_WESAD_PPG.rar
-Baseline_WESAD_PPG.rar
-```
-
-------------------------------------------------------------------------
-
-# 19. Những điểm chưa xác minh
-
-Hiện tại chưa thể xác minh đầy đủ:
-
--   Tái dựng từ 15 file WESAD `.pkl` gốc vì các file gốc không nằm trong
-    ZIP.
--   Nguyên nhân chính xác của một số artefact khác như
-    `stress_hrv_features_60s_all.csv`.
--   Nguyên nhân chính xác của các khác biệt trong
-    `stress_hrv_qc_report.csv`.
--   Accuracy trên MAX30102.
--   Hiệu năng trên dữ liệu thực địa.
--   Benchmark CPU/RAM/thời gian chạy trên ESP32-S3.
--   Numerical equivalence giữa Python và MCU sau khi tích hợp toàn bộ
-    signal processing.
-
-------------------------------------------------------------------------
-
-# 20. Checklist triển khai
-
-## Dataset / Model
-
--   [x] WESAD
--   [x] BVP/PPG 64 Hz
--   [x] 60 s window
--   [x] 30 s step
--   [x] 14 features
--   [x] Subject-wise split
--   [x] Logistic Regression
--   [x] StandardScaler
--   [x] Threshold 0.5
--   [x] Validation 100%
--   [x] Official Test 93.33%
--   [x] Deployment parameters
--   [x] C++ inference module
-
-## Integration
-
--   [ ] Nhận module signal processing của nhóm trưởng
--   [ ] Kiểm tra sampling rate
--   [ ] Kiểm tra filter
--   [ ] Kiểm tra peak detection
--   [ ] Kiểm tra PP/IBI
--   [ ] Kiểm tra 14 feature
--   [ ] Kiểm tra feature order
--   [ ] Offline integration test
--   [ ] ESP32-S3 integration
--   [ ] RAM/CPU benchmark
--   [ ] Realtime test
--   [ ] MAX30102 validation
-
-------------------------------------------------------------------------
-
-# 21. Kết luận
-
-Stress PPG model hiện tại đã được phục dựng và kiểm tra lại từ các
-artefact của project.
-
-Pipeline chính:
-
-``` text
-WESAD wrist BVP 64 Hz
-        ↓
-60 s / 30 s window
-        ↓
-Signal preprocessing
-        ↓
-PP / IBI
-        ↓
-14 HR/PRV features
-        ↓
-StandardScaler
-        ↓
-Logistic Regression
-        ↓
-Threshold 0.5
-        ↓
-Baseline / Stress
-```
-
-Kết quả chính thức:
-
-``` text
-Validation:
-42/42 = 100%
-
-Test:
-56/60 = 93.33%
-```
-
-Module portable đã chứa model và các tham số cần thiết cho inference.
-
-Bước tiếp theo không phải train lại model, mà là **tích hợp model với
-module xử lý tín hiệu PPG chung của nhóm**, sau đó kiểm thử trên
-ESP32-S3 và cuối cùng đánh giá bằng dữ liệu thực tế từ MAX30102.
-
-------------------------------------------------------------------------
-
-# 22. Tài liệu tham khảo
-
-1.  Schmidt P, Reiss A, Duerichen R, Marberger C, Van Laerhoven K.
-    *Introducing WESAD, a Multimodal Dataset for Wearable Stress and
-    Affect Detection*. ICMI 2018. DOI: 10.1145/3242969.3242985.
-
-2.  UCI Machine Learning Repository. *WESAD: Wearable Stress and Affect
-    Detection*. DOI: 10.24432/C57K5T.
-
-3.  Task Force of the ESC and NASPE. *Heart rate variability: standards
-    of measurement, physiological interpretation, and clinical use*.
-    Circulation. 1996;93:1043--1065.
-
-4.  Allen J. *Photoplethysmography and its application in clinical
-    physiological measurement*. Physiological Measurement.
-    2007;28:R1--R39. DOI: 10.1088/0967-3334/28/3/R01.
-
-5.  Schäfer A, Vagedes J. *How accurate is pulse rate variability as an
-    estimate of heart rate variability? A review of current studies*.
-    International Journal of Cardiology. 2013.
-
-6.  scikit-learn. *StandardScaler documentation*.
-
-7.  scikit-learn. *LogisticRegression documentation*.
-
-------------------------------------------------------------------------
-
-## Version
-
-``` text
-Stress PPG module
-Pipeline: 60 s HR/PRV
-Dataset: WESAD
-Classifier: Logistic Regression
-Official Test Accuracy: 93.33%
-Deployment verification: 96.67%
-Target hardware: ESP32-S3
-Sensor target: MAX30102
-Status: AI model completed; system integration pending
-```
+Báo cáo nghiên cứu Word đi kèm project: `Bao_cao_NCKH_tich_hop_PPG_ECG_SpO2_cap_nhat_25092026.docx`. README này là hướng dẫn chạy và bàn giao mã; xem báo cáo để biết cơ sở khoa học, bảng kết quả và giới hạn nghiên cứu chi tiết hơn.
