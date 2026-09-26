@@ -55,6 +55,13 @@ bool OledDriver::begin() {
     return available_;
 }
 
+void OledDriver::setSleeping(bool sleeping) {
+#if APP_ENABLE_OLED
+    if (available_ && sleeping != sleeping_) display_.setPowerSave(sleeping ? 1 : 0);
+#endif
+    sleeping_ = sleeping;
+}
+
 void OledDriver::render(MeasurementState state, const ResultSnapshot& result,
                         uint32_t remaining_ms, bool ppg_available, bool contact,
                         bool lead_off) {

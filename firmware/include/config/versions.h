@@ -4,8 +4,8 @@
 
 namespace ppgfw::config {
 
-inline constexpr const char* kFirmwareVersion = "0.3.0";
-inline constexpr uint32_t kFirmwareVersionCode = 0x000300U;
+inline constexpr const char* kFirmwareVersion = "0.4.0";
+inline constexpr uint32_t kFirmwareVersionCode = 0x000400U;
 inline constexpr uint16_t kRawSchemaVersion = 2;
 inline constexpr uint16_t kFeatureSchemaVersion = 3;
 inline constexpr uint16_t kPpgDspConfigVersion = 2;

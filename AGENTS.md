@@ -5,11 +5,19 @@
 The user requested the repaired integrated firmware in this repository:
 `https://github.com/Hieuto0409/NCKH_AI_Modules`.
 
-- `firmware/` is the integrated device firmware 0.3.0. Build and test there.
+- `firmware/` is the integrated device firmware 0.4.0. Build and test there.
 - `tin_hieu/` is the standalone signal-processing reference, not a linked library
   in the integrated firmware. Do not assume its combined-rate API matches both streams.
 - Root `src/`, `include/`, `lib/`, `tools/`, `test/`, and `platformio.ini` remain
   the existing AI modules/demo. Do not overwrite them when changing device firmware.
+
+## Current power/network behavior (0.4.0)
+
+Read `docs/power-and-noise/REVIEW.md` and `VALIDATION_RESULTS.md` for the schematic
+review and post-measurement upload lifecycle. Wi-Fi must remain off throughout
+contact/warmup/acquisition. Keep bounded uploads, QoS1 acknowledgement, no silent
+queue loss, sensor pause/resume, and unmodified sample rates/model contracts.
+Do not claim measured battery life or eliminated interference from host tests.
 
 ## Read before changing firmware
 

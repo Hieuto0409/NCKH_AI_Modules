@@ -21,6 +21,7 @@ public:
     EcgAcquisition(EcgAdcBackend& backend, EcgSampleQueue& queue, Clock clock = TimestampService::nowUs);
     bool begin();
     void poll();
+    bool setActive(bool active);
     void resetWindowDiagnostics();
     IntegrityDiagnostics diagnostics() const;
     bool leadOff() const;
@@ -40,6 +41,7 @@ private:
     uint32_t sequence_{};
     uint64_t next_sample_us_{};
     bool available_{};
+    bool active_{};
     bool lead_off_{};
     bool pending_dropout_context_{};
 };

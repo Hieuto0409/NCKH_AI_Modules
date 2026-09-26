@@ -23,9 +23,6 @@ TelemetryPublisher::TelemetryPublisher(MqttClient& client) : client_(client) {
 }
 
 void TelemetryPublisher::publish(const ResultSnapshot& result) {
-    if (!client_.connected()) {
-        return;
-    }
     char ecg_hr[20]{};
     char ppg_hr[20]{};
     char spo2[20]{};

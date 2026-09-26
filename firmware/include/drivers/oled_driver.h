@@ -17,6 +17,7 @@ class OledDriver {
 public:
     OledDriver();
     bool begin();
+    void setSleeping(bool sleeping);
     void render(MeasurementState state, const ResultSnapshot& result, uint32_t remaining_ms,
                 bool ppg_available, bool contact, bool lead_off);
 
@@ -25,6 +26,7 @@ private:
     U8G2_SH1106_128X64_NONAME_F_4W_SW_SPI display_;
 #endif
     bool available_{};
+    bool sleeping_{};
 };
 
 }

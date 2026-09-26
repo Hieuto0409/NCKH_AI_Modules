@@ -253,8 +253,33 @@ void test_raw_flatline_and_clipping_are_rejected() {
     TEST_ASSERT_EQUAL(int(FeatureVectorStatus::QualityRejected),int(r.ecg_af.status));
     TEST_ASSERT_EQUAL(int(FeatureVectorStatus::QualityRejected),int(r.stress_ppg.status));
 }
+void test_adc_pauses_and_resumes_without_counting_sleep_as_loss() {
+    fake_now=0; FakeAdc adc; EcgSampleQueue q; EcgAcquisition a(adc,q,fakeClock);
+    TEST_ASSERT_TRUE(a.begin()); a.poll();
+    TEST_ASSERT_TRUE(a.setActive(false)); TEST_ASSERT_EQUAL_UINT32(0,q.size());
+    fake_now=60000000; a.poll(); TEST_ASSERT_EQUAL_INT(1,adc.reads);
+    TEST_ASSERT_TRUE(a.setActive(true)); a.poll();
+    TEST_ASSERT_EQUAL_INT(2,adc.reads); TEST_ASSERT_EQUAL_UINT32(0,a.diagnostics().dropped_samples);
+    EcgSample sample;TEST_ASSERT_TRUE(q.pop(sample));
+    TEST_ASSERT_EQUAL_UINT64(fake_now,sample.timestamp_us);
+    TEST_ASSERT_BITS_HIGH(SampleDropoutContext,sample.flags);
+}
+void test_contact_timeout_survives_warmup_contact_bounce() {
+    MeasurementStateMachine sm; sm.begin(0); sm.selfTestComplete(true,0);
+    sm.update(1,true,false,false,true);
+    sm.update(10,false,false,true,false);sm.update(500010,false,false,true,false);
+    TEST_ASSERT_EQUAL(int(MeasurementState::Warmup),int(sm.state()));
+    sm.update(500011,false,false,false,true);
+    TEST_ASSERT_EQUAL(int(MeasurementState::ContactWait),int(sm.state()));
+    sm.update(120000001,false,false,false,true);
+    TEST_ASSERT_EQUAL(int(MeasurementState::Idle),int(sm.state()));
+    sm.update(120000002,true,false,false,true);
+    TEST_ASSERT_EQUAL(int(MeasurementState::ContactWait),int(sm.state()));
+}
 int main() {
     UNITY_BEGIN();
+    RUN_TEST(test_adc_pauses_and_resumes_without_counting_sleep_as_loss);
+    RUN_TEST(test_contact_timeout_survives_warmup_contact_bounce);
     RUN_TEST(test_ecg_rate_change_selects_most_valid_rr_not_session_average);
     RUN_TEST(test_raw_flatline_and_clipping_are_rejected);
     RUN_TEST(test_fifo_random_batch_boundaries);

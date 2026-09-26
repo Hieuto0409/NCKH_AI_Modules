@@ -9,3 +9,5 @@ __pycache__/
 !.env.example
 *.log
 desktop.ini
+
+/include/config/network_secrets.h

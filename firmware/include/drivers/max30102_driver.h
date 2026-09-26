@@ -8,6 +8,7 @@ public:
     bool begin(TwoWire& wire = Wire);
     FifoDrainResult drain(PpgFifoSample* output, size_t capacity, bool unknown = false);
     bool available() const;
+    bool shutdown();
 private:
     bool read(uint8_t reg, uint8_t* bytes, size_t count) override;
     bool write(uint8_t reg, uint8_t value) override;

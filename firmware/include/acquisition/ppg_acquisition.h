@@ -13,6 +13,7 @@ public:
     PpgAcquisition(Max30102Driver& driver, PpgSampleQueue& queue);
     bool begin();
     void poll();
+    bool setActive(bool active);
     void resetWindowDiagnostics();
     IntegrityDiagnostics diagnostics() const;
     bool sensorAvailable() const;
@@ -29,6 +30,7 @@ private:
     bool pending_discontinuity_{};
     uint32_t latest_ir_{};
     bool available_{};
+    bool active_{};
 };
 
 }

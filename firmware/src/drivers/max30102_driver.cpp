@@ -34,6 +34,11 @@ FifoDrainResult Max30102Driver::drain(PpgFifoSample* output, size_t capacity, bo
     }
     return fifo_.drain(*this, output, capacity, unknown);
 }
+bool Max30102Driver::shutdown() {
+    if (!wire_) return false;
+    // Stop conversion and LED pulses. Register configuration is restored by begin().
+    return write(0x09, 0x83);
+}
 bool Max30102Driver::available() const { return available_; }
 bool Max30102Driver::write(uint8_t reg, uint8_t value) {
     wire_->beginTransmission(0x57); wire_->write(reg); wire_->write(value);

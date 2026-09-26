@@ -1,0 +1,50 @@
+{
+  "firmware": "0.4.0",
+  "baseline_commit": "f115c38f1fbe772a5024e1348b96f0bdc905e82f",
+  "source_sha256": "2848419a70e00cf9f1476031711a5b0428b8d74979f19bfa554f46f086174d90",
+  "fingerprint_scope": "Sorted firmware src/include files and platformio.ini; relative path + NUL + LF-normalized bytes",
+  "native": {
+    "passed": 42,
+    "failed": 0
+  },
+  "network_mock": {
+    "scenarios": 8,
+    "unconfigured_radio_off": "PASS"
+  },
+  "serialization": {
+    "status": "PASS",
+    "mqtt_bytes": 765,
+    "binary_records": 18,
+    "raw_schema": 2,
+    "feature_schema": 3
+  },
+  "hardware_noise_current_sleep_sensor_resume": "NOT RUN",
+  "real_ThingsBoard": "NOT RUN",
+  "model_weights_scaler_sampling_pinout": "UNCHANGED",
+  "builds": {
+    "esp32-s3-devkitc-1": {
+      "status": "PASS",
+      "static_ram_bytes": 81728,
+      "flash_bytes": 413293,
+      "firmware_bin_sha256": "271965fab7c1fc2f87767734be53d32c6acd817381d848449dd88e9e05c0108e"
+    },
+    "esp32-s3-devkitc-1-mqtt": {
+      "status": "PASS",
+      "static_ram_bytes": 113488,
+      "flash_bytes": 966125,
+      "firmware_bin_sha256": "978a49db6629e1add0b1116951da59d793a9a571936c8e082cb80afae812575f"
+    },
+    "esp32-s3-devkitc-1-raw-log": {
+      "status": "PASS",
+      "static_ram_bytes": 80040,
+      "flash_bytes": 400897,
+      "firmware_bin_sha256": "ce07fede5bc7d1a0933e75d3c16978bdfda39d496fd802fc099a5057a27bc330"
+    },
+    "esp32-s3-devkitc-1-fixture": {
+      "status": "PASS",
+      "static_ram_bytes": 22264,
+      "flash_bytes": 330441,
+      "firmware_bin_sha256": "802978621f21efc61de952313d16d5176f895d53a6ff825d436b20b5cec6bc50"
+    }
+  }
+}

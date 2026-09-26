@@ -8,12 +8,23 @@ namespace ppgfw {
 PpgAcquisition::PpgAcquisition(Max30102Driver& driver, PpgSampleQueue& queue) : driver_(driver), queue_(queue) {}
 bool PpgAcquisition::begin() {
     available_ = driver_.begin();
+    active_ = available_;
+    latest_ir_ = 0;
+    queue_.clear();
+    pending_discontinuity_ = true;
     last_timestamp_us_ = 0;
     last_poll_us_ = TimestampService::nowUs();
     return available_;
 }
+bool PpgAcquisition::setActive(bool active) {
+    if (active) return begin();
+    active_ = false;
+    latest_ir_ = 0;
+    queue_.clear();
+    return driver_.shutdown();
+}
 void PpgAcquisition::poll() {
-    if (!available_) return;
+    if (!available_ || !active_) return;
     const uint64_t started = TimestampService::nowUs();
     const bool stale = last_poll_us_ && started - last_poll_us_ > 32 * config::kPpgSamplePeriodUs;
     last_poll_us_ = started;

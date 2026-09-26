@@ -1,5 +1,13 @@
 # AI_Moudel_Summary — nguyên mẫu phân tích ECG và PPG
 
+## Chế độ pin và gửi sau đo — firmware 0.4.0
+
+Đã bổ sung tắt Wi-Fi khi đo, dừng cảm biến khi nghỉ, OLED power-save và gửi
+ThingsBoard sau kết quả bằng MQTT QoS1 có thời hạn. Xem [rà soát schematic và nhiễu](docs/power-and-noise/REVIEW.md)
+và [kiểm chứng](docs/power-and-noise/VALIDATION_RESULTS.md). Chưa đo dòng/nhiễu hoặc
+thử chu kỳ ngủ/thức trên bo. Bản mặc định vẫn offline; dùng profile `esp32-s3-devkitc-1-mqtt`
+và cấu hình riêng để gửi ThingsBoard.
+
 ## Firmware tích hợp 0.3.0 — cập nhật 27/09/2026
 
 Firmware đã sửa được đưa vào repo này từ [EdgeAI-PPG-Screening, commit 3f2ec90](https://github.com/Hieuto0409/EdgeAI-PPG-Screening/commit/3f2ec90882ea28f3736e76c63514bb2a27d58162), với các phần tách riêng:

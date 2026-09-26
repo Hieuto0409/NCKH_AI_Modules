@@ -25,6 +25,7 @@ bool EcgAcquisition::begin() {
     if (!mutex_) return false;
 #endif
     available_ = backend_.begin();
+    active_ = available_;
     next_sample_us_ = clock_();
 #if !defined(PPGFW_NATIVE_TEST)
     if (!available_) return false;
@@ -42,12 +43,33 @@ bool EcgAcquisition::begin() {
 #endif
     return available_;
 }
+bool EcgAcquisition::setActive(bool active) {
+#if !defined(PPGFW_NATIVE_TEST)
+    if (!mutex_) return false;
+    if (timer_) esp_timer_stop(timer_);
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+#endif
+    active_ = active && available_;
+    queue_.clear(); // producer is locked; discard samples from the previous session
+    next_sample_us_ = clock_();
+    pending_dropout_context_ = true;
+    lead_off_ = true; // next real ADC tick refreshes contact state
+#if !defined(PPGFW_NATIVE_TEST)
+    if (active_ && (!timer_ || esp_timer_start_periodic(timer_, config::kEcgSamplePeriodUs) != ESP_OK))
+        active_ = false;
+    const bool ok = !active || active_;
+    xSemaphoreGive(mutex_);
+    return ok;
+#else
+    return !active || active_;
+#endif
+}
 void EcgAcquisition::poll() {
 #if !defined(PPGFW_NATIVE_TEST)
     xSemaphoreTake(mutex_, portMAX_DELAY);
 #endif
     const uint64_t started = clock_();
-    if (available_ && started >= next_sample_us_) {
+    if (available_ && active_ && started >= next_sample_us_) {
         const uint32_t skipped = static_cast<uint32_t>((started-next_sample_us_)/config::kEcgSamplePeriodUs);
         diagnostics_.dropped_samples += skipped;
         diagnostics_.expected_samples += skipped + 1;

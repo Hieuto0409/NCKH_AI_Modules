@@ -18,6 +18,11 @@ void MeasurementStateMachine::selfTestComplete(bool success, uint64_t now_us) {
 void MeasurementStateMachine::update(uint64_t now_us, bool start_pressed,
                                      bool cancel_pressed, bool contact,
                                      bool lead_off, bool window_drained) {
+    if ((state_ == MeasurementState::ContactWait || state_ == MeasurementState::Warmup) &&
+        now_us >= contact_deadline_us_) {
+        transition(MeasurementState::Idle, now_us);
+        return;
+    }
     switch (state_) {
         case MeasurementState::Idle:
             if (start_pressed) {
@@ -106,6 +111,9 @@ uint32_t MeasurementStateMachine::remainingMs(uint64_t now_us) const {
 }
 
 void MeasurementStateMachine::transition(MeasurementState next, uint64_t now_us) {
+    if (next == MeasurementState::ContactWait &&
+        (state_ == MeasurementState::Idle || state_ == MeasurementState::Result))
+        contact_deadline_us_ = now_us + 120000000ULL;
     state_ = next;
     if (next == MeasurementState::Measuring) measurement_start_us_ = now_us;
     entered_at_us_ = now_us;

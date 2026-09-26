@@ -32,6 +32,7 @@ private:
     void startMeasurement(uint64_t now_us);
     void finishMeasurement(uint64_t now_us, uint32_t now_ms);
     void updatePresentation(uint32_t now_ms);
+    bool setAcquisitionActive(bool active);
 
     Max30102Driver ppg_driver_{};
     Esp32AdcBackend ecg_backend_{};
@@ -54,6 +55,11 @@ private:
     TelemetryPublisher telemetry_publisher_{mqtt_client_};
     ResultSnapshot result_{};
     MeasurementState previous_state_{MeasurementState::Boot};
+    bool acquisition_active_{true};
+    bool light_sleep_ready_{};
+    uint32_t last_network_acked_{}, last_network_rejected_{};
+    size_t last_network_pending_{};
+    uint32_t last_ppg_poll_ms_{};
     uint32_t last_oled_update_ms_{};
     uint32_t last_telemetry_ms_{};
 };

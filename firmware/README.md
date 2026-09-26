@@ -1,4 +1,4 @@
-# ECG PPG Edge AI firmware 0.3.0
+# ECG PPG Edge AI firmware 0.4.0
 
 PlatformIO firmware for ESP32-S3 DevKitC-1 N16R8 with MAX30102 and AD8232.
 
@@ -73,3 +73,18 @@ See [repair report](../docs/ai-compatibility/REPAIR_REPORT.md) for test results,
 real host ECG inference, quantization details and required board measurements.
 Native Unity still uses an ECG model stub; `tools/host_inference/run.py` exercises
 the actual export separately. Neither test establishes clinical performance.
+
+## Battery operation and ThingsBoard (0.4.0)
+
+See [power/noise review](../docs/power-and-noise/REVIEW.md) and
+[validation](../docs/power-and-noise/VALIDATION_RESULTS.md). Wi-Fi is off during
+acquisition; the MQTT profile connects only after the result, waits for QoS1 ACK,
+and turns the radio off after success/error/30 s budget. Pending results use a
+four-entry RAM queue. Configure the ignored `include/config/network_secrets.h`
+from the example header; default firmware remains offline.
+
+MAX30102 shuts down and ECG sampling pauses outside measurement/contact. OLED is
+off during warmup/measurement and after 15 s idle; buttons still work. Idle may
+enter light sleep with button GPIO wake and a one-second timer fallback. Raw-log
+profiles intentionally retain continuous acquisition. Board current, RF noise,
+sleep/wake, sensor resume and real ThingsBoard delivery still need bench tests.

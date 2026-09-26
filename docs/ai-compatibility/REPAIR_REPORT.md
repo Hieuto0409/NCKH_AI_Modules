@@ -1,5 +1,7 @@
 # Báo cáo sửa tương thích firmware–AI 0.3.0
 
+> Báo cáo này giữ bằng chứng firmware 0.3.0. Thay đổi nguồn/mạng 0.4.0 được ghi riêng tại [power-and-noise/REVIEW.md](../power-and-noise/REVIEW.md).
+
 Ngày: 2026-09-26. Repo: `Hieuto0409/EdgeAI-PPG-Screening`, firmware trong `firmware/`.
 Baseline code `df46fc1`; kế hoạch lưu tại `078a23b`.
 Runtime sửa ở `398c91b`, bổ sung recovery A_FULL ở `49ae13c`;
