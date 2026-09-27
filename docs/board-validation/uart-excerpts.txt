@@ -1,0 +1,32 @@
+=== fixture-flash.log ===
+*** OFFLINE TEST — NOT A SENSOR MEASUREMENT ***
+AI commit: 7d4683581c8c01ff6878bcad31a601aff271f2a0
+Stress fixture: status=0 p=0.648799479 label=2 latency_us=116
+ECG AF fixture: status=0 label=4 p_af=0.003906 latency_us=706
+SpO2 fixture: status=0 estimator=1 percent=96.0 pairs=400 resets=0
+*** OFFLINE TEST COMPLETE ***
+=== board-diag-flash.log ===
+*** BOARD DIAGNOSTICS - NOT A BODY MEASUREMENT ***
+BOARD flash=16777216 psram=8386279 heap=304656 wifi_err=12289 wifi_mode=0
+PSRAM pattern_32KiB=PASS
+DRIVERS ppg=1 ecg=1
+I2C address=0x57 result=0
+I2C address=0x68 result=2
+CAPTURE first begin=1/1 stop=1/1 elapsed_us=10000298 ppg=1999 ecg=4999 drops=0/1 overflow=0 qdrop=0/0 lead_off=0 ecg_dt_us=1881:2049 reversals=0 raw_ecg=0:204 red=0:526 ir=1114:1180 max_mode=131
+PAUSE ecg_added=0 max_mode=131
+LIGHT_SLEEP err=0 elapsed_us=999826 cause=4
+CAPTURE after_sleep begin=1/1 stop=1/1 elapsed_us=10000739 ppg=1999 ecg=4999 drops=0/1 overflow=0 qdrop=0/0 lead_off=0 ecg_dt_us=1901:2037 reversals=0 raw_ecg=0:171 red=0:534 ir=1119:1173 max_mode=131
+MEMORY heap=299168 min_heap=293820 stack_free=30460
+*** BOARD DIAGNOSTICS COMPLETE ***
+=== production-first-boot.log ===
+SELFTEST ppg=ok ecg=ok backend=ESP32_ADC1_ONESHOT_CANDIDATE
+PPGFW 0.4.0 | MAX30102=200Hz ECG=500Hz | PSRAM=yes | AI=7d4683581c8c01ff6878bcad31a601aff271f2a0
+DIAG lines: 49
+First: DIAG ppg=0/0 drop=0 ovf=0 q=0 ecg=0/0 drop=0 lead=0 q=0
+Last: DIAG ppg=0/0 drop=0 ovf=0 q=0 ecg=0/0 drop=0 lead=0 q=0
+=== production-flash.log ===
+SELFTEST ppg=ok ecg=ok backend=ESP32_ADC1_ONESHOT_CANDIDATE
+PPGFW 0.4.0 | MAX30102=200Hz ECG=500Hz | PSRAM=yes | AI=7d4683581c8c01ff6878bcad31a601aff271f2a0
+DIAG lines: 49
+First: DIAG ppg=0/0 drop=0 ovf=0 q=0 ecg=0/0 drop=0 lead=0 q=0
+Last: DIAG ppg=0/0 drop=0 ovf=0 q=0 ecg=0/0 drop=0 lead=0 q=0

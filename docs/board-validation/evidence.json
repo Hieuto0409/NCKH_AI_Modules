@@ -1,0 +1,60 @@
+{
+  "date": "2026-09-27",
+  "production_base_commit": "7c1f530b35d68c80b82f2241acba259df04df339",
+  "method": "VS Code process tasks invoking esptool, followed by UART capture",
+  "board": "ESP32-S3 revision 0.2; 16MB flash; 8MB PSRAM; CH343 USB serial",
+  "final_profile": "esp32-s3-devkitc-1",
+  "final_ai_enabled": true,
+  "final_mqtt_enabled": false,
+  "builds": {
+    "esp32-s3-devkitc-1-fixture": {
+      "firmware_bin_sha256": "802978621f21efc61de952313d16d5176f895d53a6ff825d436b20b5cec6bc50"
+    },
+    "esp32-s3-devkitc-1-board-diag": {
+      "firmware_bin_sha256": "73bc0678d3a8592c7136039bd5918f61345f246a07bfc61affaea484b2b3af5d"
+    },
+    "esp32-s3-devkitc-1": {
+      "firmware_bin_sha256": "271965fab7c1fc2f87767734be53d32c6acd817381d848449dd88e9e05c0108e"
+    }
+  },
+  "captures": {
+    "fixture-flash.log": {
+      "capture_complete": true,
+      "flash_region_hash_verifications": 4,
+      "firmware_boot_lines": 0,
+      "diag_lines": 0,
+      "all_idle_diag_zero": null,
+      "crash_markers_present": false
+    },
+    "board-diag-flash.log": {
+      "capture_complete": true,
+      "flash_region_hash_verifications": 4,
+      "firmware_boot_lines": 0,
+      "diag_lines": 0,
+      "all_idle_diag_zero": null,
+      "crash_markers_present": false
+    },
+    "production-first-boot.log": {
+      "capture_complete": true,
+      "flash_region_hash_verifications": 4,
+      "firmware_boot_lines": 1,
+      "diag_lines": 49,
+      "all_idle_diag_zero": true,
+      "crash_markers_present": false
+    },
+    "production-flash.log": {
+      "capture_complete": true,
+      "flash_region_hash_verifications": 4,
+      "firmware_boot_lines": 1,
+      "diag_lines": 49,
+      "all_idle_diag_zero": true,
+      "crash_markers_present": false
+    }
+  },
+  "limitations": [
+    "Synthetic fixture execution, no independent golden or clinical validation",
+    "DS3231 0x68 NACK",
+    "ECG dropped_samples=1 in each short capture; cause not proven",
+    "No valid body signal, physical button, OLED observation, real ThingsBoard, current or noise test"
+  ]
+}

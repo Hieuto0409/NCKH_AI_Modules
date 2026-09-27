@@ -19,6 +19,13 @@ contact/warmup/acquisition. Keep bounded uploads, QoS1 acknowledgement, no silen
 queue loss, sensor pause/resume, and unmodified sample rates/model contracts.
 Do not claim measured battery life or eliminated interference from host tests.
 
+Read `docs/board-validation/2026-09-27.md` for subsequent physical-board testing
+and final installed offline production profile. AI fixture, short acquisition,
+sensor pause/resume and timer sleep ran on ESP32-S3. DS3231 at 0x68 NACK and one
+ECG dropped-slot count per start remain open. Do not equate fixture execution
+with clinical validation or short diagnostic sleep with GPIO/production validation.
+Always restore the production profile after `esp32-s3-devkitc-1-board-diag`.
+
 ## Read before changing firmware
 
 Read `docs/ai-compatibility/REPOSITORY_HANDOFF.md`, `REPAIR_REPORT.md`,

@@ -1,0 +1,96 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ESP32: 1 - Flash AI fixture and test",
+      "type": "process",
+      "command": "${env:USERPROFILE}/.platformio/penv/Scripts/python.exe",
+      "args": [
+        "-X",
+        "utf8",
+        "${workspaceFolder}/tools/board_test/flash_and_capture.py",
+        "--environment",
+        "esp32-s3-devkitc-1-fixture",
+        "--port",
+        "COM6",
+        "--seconds",
+        "45"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "ESP32: 2 - Flash production and test",
+      "type": "process",
+      "command": "${env:USERPROFILE}/.platformio/penv/Scripts/python.exe",
+      "args": [
+        "-X",
+        "utf8",
+        "${workspaceFolder}/tools/board_test/flash_and_capture.py",
+        "--environment",
+        "esp32-s3-devkitc-1",
+        "--port",
+        "COM6",
+        "--seconds",
+        "50"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "ESP32: 3 - Monitor production buttons",
+      "type": "process",
+      "command": "${env:USERPROFILE}/.platformio/penv/Scripts/python.exe",
+      "args": [
+        "-X",
+        "utf8",
+        "${workspaceFolder}/tools/board_test/flash_and_capture.py",
+        "--environment",
+        "esp32-s3-devkitc-1",
+        "--port",
+        "COM6",
+        "--seconds",
+        "150",
+        "--capture-only"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "ESP32: 4 - Hardware diagnostics",
+      "type": "process",
+      "command": "${env:USERPROFILE}/.platformio/penv/Scripts/python.exe",
+      "args": [
+        "-X",
+        "utf8",
+        "${workspaceFolder}/tools/board_test/flash_and_capture.py",
+        "--environment",
+        "esp32-s3-devkitc-1-board-diag",
+        "--port",
+        "COM6",
+        "--seconds",
+        "60",
+        "--manifest",
+        "${workspaceFolder}/../docs/board-validation/evidence.json"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    }
+  ]
+}

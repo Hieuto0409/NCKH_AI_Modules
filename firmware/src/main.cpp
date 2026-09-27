@@ -1,11 +1,15 @@
-#if defined(PPGFW_OFFLINE_FIXTURE)
+#if defined(PPGFW_BOARD_DIAGNOSTICS)
+#include "app/board_diagnostics_app.h"
+#elif defined(PPGFW_OFFLINE_FIXTURE)
 #include "app/offline_fixture_app.h"
 #else
 #include "app/app_controller.h"
 #endif
 
 namespace {
-#if defined(PPGFW_OFFLINE_FIXTURE)
+#if defined(PPGFW_BOARD_DIAGNOSTICS)
+ppgfw::BoardDiagnosticsApp app;
+#elif defined(PPGFW_OFFLINE_FIXTURE)
 ppgfw::OfflineFixtureApp app;
 #else
 ppgfw::AppController app;

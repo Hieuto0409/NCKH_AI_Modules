@@ -1,5 +1,10 @@
 # Kết quả kiểm chứng firmware 0.4.0
 
+**Cập nhật phần cứng sau lượt kiểm chứng này:** xem
+[kiểm thử bo ngày27/09/2026](../board-validation/2026-09-27.md). Đã nạp và chạy
+fixture AI, thu mẫu ngắn, shutdown/resume và timer sleep. Các mục chưa chạy bên
+dưới mô tả lượt kiểm chứng phần mềm ban đầu, không thay thế báo cáo bo mới.
+
 Ngày 27/09/2026. Nguồn bắt đầu từ `f115c38`; kết quả này thuộc source có SHA-256
 `2848419a70e00cf9f1476031711a5b0428b8d74979f19bfa554f46f086174d90`. Phạm vi digest và SHA-256 binary ghi trong
 [evidence.json](evidence.json). Các binary/cache không đưa lên Git.
