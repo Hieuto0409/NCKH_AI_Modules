@@ -7,14 +7,14 @@ import serial
 
 FW=Path(__file__).resolve().parents[2]
 p=argparse.ArgumentParser()
-p.add_argument('--environment',required=True,choices=['esp32-s3-devkitc-1-fixture','esp32-s3-devkitc-1','esp32-s3-devkitc-1-board-diag','esp32-s3-devkitc-1-thingsboard'])
+p.add_argument('--environment',required=True,choices=['esp32-s3-devkitc-1-fixture','esp32-s3-devkitc-1','esp32-s3-devkitc-1-board-diag','esp32-s3-devkitc-1-thingsboard','esp32-s3-devkitc-1-network-diag'])
 p.add_argument('--port',default='COM6')
 p.add_argument('--seconds',type=int,default=45)
 p.add_argument('--capture-only',action='store_true')
 p.add_argument('--manifest',type=Path)
 p.add_argument('--log-dir',type=Path)
 a=p.parse_args()
-label='thingsboard' if a.environment.endswith('-thingsboard') else ('board-diag' if a.environment.endswith('-board-diag') else ('fixture' if a.environment.endswith('-fixture') else 'production'))
+label='network-diag' if a.environment.endswith('-network-diag') else 'thingsboard' if a.environment.endswith('-thingsboard') else ('board-diag' if a.environment.endswith('-board-diag') else ('fixture' if a.environment.endswith('-fixture') else 'production'))
 logs=a.log_dir or FW/'.pio/verification/board-2026-09-27';logs.mkdir(parents=True,exist_ok=True)
 logpath=logs/(label+('-capture' if a.capture_only else '-flash')+'.log')
 with logpath.open('w',encoding='utf-8') as out:
@@ -46,5 +46,5 @@ with logpath.open('w',encoding='utf-8') as out:
             data=uart.readline()
             if data:
                 line=data.decode('utf-8',errors='replace');emit(line)
-                if (label=='fixture' and 'OFFLINE TEST COMPLETE' in line) or (label=='board-diag' and 'BOARD DIAGNOSTICS COMPLETE' in line): break
+                if (label=='fixture' and 'OFFLINE TEST COMPLETE' in line) or (label=='board-diag' and 'BOARD DIAGNOSTICS COMPLETE' in line) or (label=='network-diag' and 'NETWORK DIAGNOSTICS COMPLETE' in line): break
     emit('\nCapture complete. Log: '+str(logpath)+'\n')

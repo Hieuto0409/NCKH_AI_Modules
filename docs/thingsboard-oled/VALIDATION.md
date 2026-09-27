@@ -1,5 +1,10 @@
 # Kiểm chứng OLED và ThingsBoard 0.5.0 — 27/09/2026
 
+**Cập nhật sau lượt kiểm chứng ban đầu:** ESP32 đã gửi HTTPS200, đọc lại đúng trên
+ThingsBoard và được nạp bản production có Wi-Fi. Xem
+[BOARD_NETWORK.md](BOARD_NETWORK.md) và [bằng chứng bo](board-network-evidence.json).
+Các build/hash và lần nạp offline bên dưới là lịch sử của lượt ban đầu.
+
 Source bắt đầu từ `b773395`. Chỉ thay giao diện, trạng thái gửi, transport HTTPS,
 thời gian xem kết quả và công cụ kiểm thử; giữ model pin, scaler, DSP, pinout,
 tần số/cửa sổ thu. Không sửa hai phát hiện ECG start-slot và DS3231 của lượt trước.
@@ -30,17 +35,10 @@ Các hash và tổng hợp nằm trong [evidence.json](evidence.json).
 
 ## Phạm vi chưa hoàn tất
 
-**ESP32 → Wi-Fi → ThingsBoard: NOT RUN.** Mạng máy tính đang dùng là5GHz; S3
-cần2.4GHz. Đọc mật khẩu profile2.4GHz đã lưu bị cơ chế duyệt tự động chặn vì cần
-quyền trích xuất mật khẩu cụ thể; chưa đọc được mật khẩu. Đang chờ xác nhận hoặc
-mật khẩu do người dùng cung cấp. SSID/password trong cấu hình riêng vẫn trống.
-Token thiết bị đã lưu riêng, không có tài khoản tenant trong firmware.
-
-Bản HTTPS đã build không đồng nghĩa đã kết nối từ bo; bản **đang cài là offline**.
-Sau khi có cấu hình mạng được phép dùng: build lại profile ThingsBoard, cập nhật
-manifest cục bộ theo binary mới, kiểm thử bản tin đánh dấu `test_origin=esp32`
-không chứa số đo người, đọc lại ThingsBoard và xác nhận radio tắt sau ACK/timeout.
-Không gọi bản tin từ máy tính là bản tin của ESP32.
+Lượt ban đầu dừng ở bản offline vì quyền đọc Wi-Fi chưa được xác nhận.
+Sau khi người dùng xác nhận, **ESP32 → Wi-Fi → ThingsBoard đã PASS** cho bản tin
+chẩn đoán riêng; bản cuối là production ThingsBoard. Kết quả chi tiết ở báo cáo
+bổ sung phía trên. Không đồng nhất bản tin thử với một phiên đo sinh học hợp lệ.
 
 Chưa có người quan sát trực tiếp màn OLED, nhấn hai nút trên bo, thử một phiên
 đo tiếp xúc hợp lệ, xác nhận gửi lại khi mạng mất, GPIO wake hoặc đo dòng/nhiễu.

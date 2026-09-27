@@ -6,6 +6,12 @@ tính từ repo root) và `--log-dir firmware/.pio/verification/thingsboard`. Ma
 hình riêng, hash binary có thể đổi: build/kiểm chứng lại trước khi tạo manifest
 cục bộ mới. Xem [kết quả0.5.0](../../../docs/thingsboard-oled/VALIDATION.md).
 
+Kết nối từ bo đã được kiểm chứng thêm bằng profile `esp32-s3-devkitc-1-network-diag`;
+xem [BOARD_NETWORK.md](../../../docs/thingsboard-oled/BOARD_NETWORK.md). Profile này
+gửi metadata thử với cảm biến dừng và phải được thay bằng production ThingsBoard
+sau khi thử. Manifest của lần có Wi-Fi là `docs/thingsboard-oled/board-network-evidence.json`.
+Không dùng hash bản chưa cấu hình Wi-Fi để nạp bản có cấu hình riêng.
+
 Mở thư mục `firmware/` trong VS Code. Công cụ `flash_and_capture.py` dùng Python
 của PlatformIO (có pyserial), esptool và các binary đã build. Nó kiểm tra SHA256
 `firmware.bin` với manifest trước khi ghi; esptool kiểm tra các vùng flash đã ghi.

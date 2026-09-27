@@ -117,7 +117,33 @@
         "--seconds",
         "50",
         "--manifest",
-        "${workspaceFolder}/../docs/thingsboard-oled/evidence.json",
+        "${workspaceFolder}/../docs/thingsboard-oled/board-network-evidence.json",
+        "--log-dir",
+        "${workspaceFolder}/.pio/verification/thingsboard"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "ESP32: 6 - Test board ThingsBoard connection",
+      "type": "process",
+      "command": "${env:USERPROFILE}/.platformio/penv/Scripts/python.exe",
+      "args": [
+        "-X",
+        "utf8",
+        "${workspaceFolder}/tools/board_test/flash_and_capture.py",
+        "--environment",
+        "esp32-s3-devkitc-1-network-diag",
+        "--port",
+        "COM6",
+        "--seconds",
+        "70",
+        "--manifest",
+        "${workspaceFolder}/../docs/thingsboard-oled/board-network-evidence.json",
         "--log-dir",
         "${workspaceFolder}/.pio/verification/thingsboard"
       ],

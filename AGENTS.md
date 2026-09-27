@@ -20,6 +20,10 @@ uses HTTPS 443 with GTS Root R4, hostname/time verification and HTTP 200 ACK;
 the older TCP MQTT profile is for trusted LAN only. Never embed tenant login or
 commit device tokens, Wi-Fi credentials, or firmware binaries containing them.
 Distinguish verified host-to-server connectivity from ESP32-to-server validation.
+`docs/thingsboard-oled/BOARD_NETWORK.md` now records successful ESP32 HTTPS200,
+server readback, radio off after ACK/cancel, and final configured ThingsBoard
+production flash. This supersedes the earlier Wi-Fi-permission-pending/offline
+deployment status, not the remaining physical/clinical validation limitations.
 
 ## Power/network baseline (0.4.0, preserved in 0.5.0)
 

@@ -1,0 +1,83 @@
+{
+  "date": "2026-09-27",
+  "base_commit": "f54d048a8a5c9a4822cf2ea73e885449559b9fb4",
+  "builds": {
+    "esp32-s3-devkitc-1-network-diag": {
+      "firmware_bin_sha256": "84460ae17ba06c2892e540c7922cfc40c0dde50ace7f0da6704da1e96fbe70c2"
+    },
+    "esp32-s3-devkitc-1-thingsboard": {
+      "firmware_bin_sha256": "577b85232fbe3b74c64524c35b5a0baa16877d926a1938d94721a815a9c8d1f1"
+    }
+  },
+  "private_wifi_configured": true,
+  "installed_profile": "esp32-s3-devkitc-1-thingsboard",
+  "test_profile": "esp32-s3-devkitc-1-network-diag",
+  "sensor_data_sent": false,
+  "board_network": "PASS; Wi-Fi/SNTP/TLS/HTTP200/server readback",
+  "server_readback": {
+    "integration_test": [
+      {
+        "ts": 1790489092239,
+        "value": "true"
+      }
+    ],
+    "test_origin": [
+      {
+        "ts": 1790489092239,
+        "value": "esp32"
+      }
+    ],
+    "tb_board_probe_id": [
+      {
+        "ts": 1790489092239,
+        "value": "ppgfw-board-20260927-01"
+      }
+    ],
+    "firmware_target": [
+      {
+        "ts": 1790489092239,
+        "value": "0.5.0"
+      }
+    ],
+    "cancelled_network_probe": [
+      {
+        "ts": 1790489159458,
+        "value": null
+      }
+    ]
+  },
+  "diagnostic_uart": [
+    "NETTEST sensors ppg=1 shutdown=1 ecg_task=not_started",
+    "NETTEST target_visible=1 channel=6 rssi=-62",
+    "NETTEST acquisition_gate queued=1 pending=1 radio=0 mode=0",
+    "NETTEST stage=4 wifi=6 pending=1 ack=0 http=0 time_ok=0 elapsed_ms=8",
+    "NETTEST stage=4 wifi=6 pending=1 ack=0 http=0 time_ok=0 elapsed_ms=1013",
+    "NETTEST stage=4 wifi=0 pending=1 ack=0 http=0 time_ok=0 elapsed_ms=2018",
+    "NETTEST stage=4 wifi=0 pending=1 ack=0 http=0 time_ok=0 elapsed_ms=3023",
+    "NETTEST stage=4 wifi=0 pending=1 ack=0 http=0 time_ok=0 elapsed_ms=4028",
+    "NETTEST stage=5 wifi=3 pending=1 ack=0 http=0 time_ok=0 elapsed_ms=4893",
+    "NETTEST stage=5 wifi=3 pending=1 ack=0 http=0 time_ok=0 elapsed_ms=5898",
+    "NETTEST stage=6 wifi=3 pending=1 ack=0 http=0 time_ok=1 elapsed_ms=6183",
+    "NETTEST stage=6 wifi=3 pending=1 ack=0 http=0 time_ok=1 elapsed_ms=7823",
+    "NETTEST stage=7 wifi=255 pending=0 ack=1 http=200 time_ok=1 elapsed_ms=8798",
+    "NETTEST result probe_id=ppgfw-board-20260927-01 ack=1 http=200 radio=0 mode=0 heap=281728 min_heap=203312",
+    "NETTEST cancel pending=1 ack=1 radio=0 mode=0"
+  ],
+  "production_uart": [
+    "SELFTEST ppg=ok ecg=ok backend=ESP32_ADC1_ONESHOT_CANDIDATE",
+    "PPGFW 0.5.0 | MAX30102=200Hz ECG=500Hz | PSRAM=yes | AI=7d4683581c8c01ff6878bcad31a601aff271f2a0",
+    "UPLOAD pending=0 server_acked=0 rejected=0 stage=2"
+  ],
+  "production_capture_seconds": 25,
+  "production_idle_diag_lines": 24,
+  "production_flash_regions_verified": 4,
+  "production_boot_count": 1,
+  "production_crash_markers_present": false,
+  "host_upload_regression": "MQTT 8 + HTTPS 13 + unconfigured radio-off PASS",
+  "limits": [
+    "No complete human measurement + AI + upload cycle",
+    "No OLED visual or physical button validation",
+    "Diagnostic heap is not production AI/TLS peak heap",
+    "No battery current, RF emissions or clinical validation"
+  ]
+}

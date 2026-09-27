@@ -80,7 +80,8 @@ Không coi mock TLS failure là phép tấn công chứng chỉ trên bo thật.
 
 ThingsBoard đã nhận bản tin **thử kết nối từ máy tính** và đọc lại đúng qua API,
 các trường `integration_test`, `test_origin=host_https`, `firmware_target=0.5.0`.
-Đây không phải dữ liệu người đo, cũng chưa chứng minh ESP32 kết nối Wi-Fi được.
+Đây không phải dữ liệu người đo. Lượt bổ sung đã xác nhận ESP32 kết nối và gửi
+thật, xem [BOARD_NETWORK.md](BOARD_NETWORK.md).
 Kết quả build và trạng thái nạp thực tế ghi trong `VALIDATION.md` cùng thư mục.
 
 Tài liệu giao thức: [HTTP telemetry](https://thingsboard.io/docs/reference/http-api/telemetry/),

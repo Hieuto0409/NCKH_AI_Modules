@@ -26,6 +26,7 @@ public:
     uint32_t acknowledged() const { return acknowledged_; }
     uint32_t rejected() const { return rejected_; }
     bool radioActive() const { return radio_active_; }
+    int lastHttpStatus() const { return last_http_status_; }
     bool retryPending(); // explicit user action; never starts radio while acquiring
     UploadSnapshot uploadStatus() const {
         return {latest_rejected_ ? UploadStage::Rejected : stage_, count_, acknowledged_, rejected_};
@@ -48,6 +49,7 @@ private:
     size_t head_{}, count_{};
     uint32_t started_ms_{}, acknowledged_{}, rejected_{};
     int in_flight_{-1};
+    int last_http_status_{};
     bool configured_{}, armed_{}, radio_active_{};
     bool latest_rejected_{};
     UploadStage stage_{UploadStage::Offline};

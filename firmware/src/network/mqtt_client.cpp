@@ -182,6 +182,7 @@ void MqttClient::loopHttps() {
     const auto err = esp_http_client_perform(http_);
     if (err == ESP_ERR_HTTP_EAGAIN) return;
     const int status = esp_http_client_get_status_code(http_);
+    last_http_status_ = status;
     esp_http_client_cleanup(http_); http_ = nullptr;
     if (err != ESP_OK || status != 200) { suspend(); return; }
     // ThingsBoard HTTP 200 is the application acknowledgement. No socket-write ACK.
