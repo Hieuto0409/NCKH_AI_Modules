@@ -24,6 +24,9 @@ public:
     void update(uint64_t now_us, bool start_pressed, bool cancel_pressed, bool contact,
                 bool lead_off, bool window_drained = true);
     void qualityEvaluated(uint64_t now_us);
+    void keepResultVisible(uint64_t now_us) {
+        if (state_ == MeasurementState::Result) entered_at_us_ = now_us;
+    }
     uint64_t measurementStartUs() const { return measurement_start_us_; }
     uint64_t measurementEndUs() const;
     MeasurementState state() const;

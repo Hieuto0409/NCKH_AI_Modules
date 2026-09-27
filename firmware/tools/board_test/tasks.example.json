@@ -14,7 +14,11 @@
         "--port",
         "COM6",
         "--seconds",
-        "45"
+        "45",
+        "--manifest",
+        "${workspaceFolder}/../docs/thingsboard-oled/evidence.json",
+        "--log-dir",
+        "${workspaceFolder}/.pio/verification/thingsboard"
       ],
       "problemMatcher": [],
       "presentation": {
@@ -36,7 +40,11 @@
         "--port",
         "COM6",
         "--seconds",
-        "50"
+        "50",
+        "--manifest",
+        "${workspaceFolder}/../docs/thingsboard-oled/evidence.json",
+        "--log-dir",
+        "${workspaceFolder}/.pio/verification/thingsboard"
       ],
       "problemMatcher": [],
       "presentation": {
@@ -59,7 +67,9 @@
         "COM6",
         "--seconds",
         "150",
-        "--capture-only"
+        "--capture-only",
+        "--log-dir",
+        "${workspaceFolder}/.pio/verification/thingsboard"
       ],
       "problemMatcher": [],
       "presentation": {
@@ -84,6 +94,32 @@
         "60",
         "--manifest",
         "${workspaceFolder}/../docs/board-validation/evidence.json"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "ESP32: 5 - Flash ThingsBoard HTTPS and test",
+      "type": "process",
+      "command": "${env:USERPROFILE}/.platformio/penv/Scripts/python.exe",
+      "args": [
+        "-X",
+        "utf8",
+        "${workspaceFolder}/tools/board_test/flash_and_capture.py",
+        "--environment",
+        "esp32-s3-devkitc-1-thingsboard",
+        "--port",
+        "COM6",
+        "--seconds",
+        "50",
+        "--manifest",
+        "${workspaceFolder}/../docs/thingsboard-oled/evidence.json",
+        "--log-dir",
+        "${workspaceFolder}/.pio/verification/thingsboard"
       ],
       "problemMatcher": [],
       "presentation": {

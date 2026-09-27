@@ -4,7 +4,7 @@ import importlib.util, json, shutil, subprocess, tempfile
 FW=Path(__file__).resolve().parents[2]
 def main():
     with tempfile.TemporaryDirectory(prefix='ppg-serialize-') as tmp:
-        root=Path(tmp);shutil.copytree(FW/'include',root/'include')
+        root=Path(tmp);shutil.copytree(FW/'include',root/'include',ignore=shutil.ignore_patterns('network_secrets.h'))
         for name in ('Arduino.h','main.cpp'):shutil.copyfile(Path(__file__).parent/name,root/name)
         for source in ('logging/binary_logger.cpp','network/telemetry_publisher.cpp'):
             shutil.copyfile(FW/'src'/source,root/Path(source).name)

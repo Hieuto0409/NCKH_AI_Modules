@@ -1,4 +1,4 @@
-# ECG PPG Edge AI firmware 0.4.0
+# ECG PPG Edge AI firmware 0.5.0
 
 PlatformIO firmware for ESP32-S3 DevKitC-1 N16R8 with MAX30102 and AD8232.
 
@@ -26,7 +26,8 @@ removes the temporary directory afterward.
 ## Runtime
 
 - BTN1 starts a measurement and advances from the result screen.
-- BTN2 cancels the current measurement.
+- BTN2 cancels during contact/warmup/measurement, changes result pages, and retries
+  queued uploads from Idle. Results return to Idle after 45 seconds without input.
 - MAX30102 runs Red and IR at 200 Hz, average 1. The direct FIFO reader drains
   full RED/IR pairs; SparkFun 1.1.2 is used only for setup, not its four-slot queue.
 - AD8232 uses a timer-notified acquisition task with ADC1 oneshot at target 500 Hz;
@@ -35,6 +36,13 @@ removes the temporary directory afterward.
 - Raw binary, CSV, MQTT, and OLED are independently controlled by build flags.
 - Optional profiles: `esp32-s3-devkitc-1-mqtt`, `esp32-s3-devkitc-1-raw-log`, and
   the explicit `esp32-s3-devkitc-1-fixture` offline test profile.
+- `esp32-s3-devkitc-1-thingsboard` sends over verified HTTPS 443 after measurement,
+  with a device token in the ignored local config. This is the Internet profile;
+  the older unencrypted MQTT profile is intended only for a trusted LAN.
+
+See [OLED and ThingsBoard flow](../docs/thingsboard-oled/FLOW.md) and
+[validation](../docs/thingsboard-oled/VALIDATION.md) for the three result pages,
+upload status, power behavior, deployment evidence and remaining checks.
 
 The production path uses real sensor acquisition only. Synthetic inputs exist only
 in the explicit fixture profile, which prints `OFFLINE TEST — NOT A SENSOR

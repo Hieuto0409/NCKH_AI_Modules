@@ -1,4 +1,4 @@
-"""Flash a verified 0.4.0 artifact, then reset and capture actual board UART.
+"""Flash a verified artifact, then reset and capture actual board UART.
 Invoke from the VS Code process task or directly. No chip-wide erase or credentials.
 """
 import argparse, hashlib, json, subprocess, sys, time
@@ -7,14 +7,15 @@ import serial
 
 FW=Path(__file__).resolve().parents[2]
 p=argparse.ArgumentParser()
-p.add_argument('--environment',required=True,choices=['esp32-s3-devkitc-1-fixture','esp32-s3-devkitc-1','esp32-s3-devkitc-1-board-diag'])
+p.add_argument('--environment',required=True,choices=['esp32-s3-devkitc-1-fixture','esp32-s3-devkitc-1','esp32-s3-devkitc-1-board-diag','esp32-s3-devkitc-1-thingsboard'])
 p.add_argument('--port',default='COM6')
 p.add_argument('--seconds',type=int,default=45)
 p.add_argument('--capture-only',action='store_true')
 p.add_argument('--manifest',type=Path)
+p.add_argument('--log-dir',type=Path)
 a=p.parse_args()
-label='board-diag' if a.environment.endswith('-board-diag') else ('fixture' if a.environment.endswith('-fixture') else 'production')
-logs=FW/'.pio/verification/board-2026-09-27';logs.mkdir(parents=True,exist_ok=True)
+label='thingsboard' if a.environment.endswith('-thingsboard') else ('board-diag' if a.environment.endswith('-board-diag') else ('fixture' if a.environment.endswith('-fixture') else 'production'))
+logs=a.log_dir or FW/'.pio/verification/board-2026-09-27';logs.mkdir(parents=True,exist_ok=True)
 logpath=logs/(label+('-capture' if a.capture_only else '-flash')+'.log')
 with logpath.open('w',encoding='utf-8') as out:
     def emit(text):

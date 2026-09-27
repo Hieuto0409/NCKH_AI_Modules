@@ -1,5 +1,11 @@
 # BÁO CÁO TÍCH HỢP NCKH_AI_MODULES
 
+> Cập nhật27/09/2026: source firmware **0.5.0** có ba trang OLED và profile
+> ThingsBoard HTTPS443, giữ RF/OLED tắt khi đo. Đọc
+> [FLOW.md](../docs/thingsboard-oled/FLOW.md) và
+> [VALIDATION.md](../docs/thingsboard-oled/VALIDATION.md) cho trạng thái mới.
+> Các báo cáo0.2/0.3 bên dưới là lịch sử; không suy ra mọi chức năng đã thử trên bo.
+
 > Cập nhật sửa 2026-09-26: firmware hiện là **0.3.0**. Đã sửa acquisition,
 > clock/warmup và cửa sổ ECG; xem [REPAIR_REPORT.md](../docs/ai-compatibility/REPAIR_REPORT.md)
 > cho bằng chứng hiện hành và phần kiểm chứng phần cứng còn mở.

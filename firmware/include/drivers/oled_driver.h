@@ -2,6 +2,7 @@
 
 #include "config/board_config.h"
 #include "types/result_types.h"
+#include "types/upload_status.h"
 
 #include <cstdint>
 
@@ -19,7 +20,7 @@ public:
     bool begin();
     void setSleeping(bool sleeping);
     void render(MeasurementState state, const ResultSnapshot& result, uint32_t remaining_ms,
-                bool ppg_available, bool contact, bool lead_off);
+                bool ppg_available, bool contact, bool lead_off, uint8_t page, UploadSnapshot upload);
 
 private:
 #if APP_ENABLE_OLED

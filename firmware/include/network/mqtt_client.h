@@ -1,5 +1,6 @@
 #pragma once
 #include "config/board_config.h"
+#include "types/upload_status.h"
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -7,6 +8,9 @@
 #if APP_ENABLE_MQTT
 #include <mqtt_client.h>
 #include <WiFi.h>
+#if APP_TB_HTTPS
+#include <esp_http_client.h>
+#endif
 #endif
 namespace ppgfw {
 class MqttClient {
@@ -22,11 +26,21 @@ public:
     uint32_t acknowledged() const { return acknowledged_; }
     uint32_t rejected() const { return rejected_; }
     bool radioActive() const { return radio_active_; }
+    bool retryPending(); // explicit user action; never starts radio while acquiring
+    UploadSnapshot uploadStatus() const {
+        return {latest_rejected_ ? UploadStage::Rejected : stage_, count_, acknowledged_, rejected_};
+    }
 private:
     void stopRadio();
 #if APP_ENABLE_MQTT
     static void onEvent(void* context, esp_event_base_t, int32_t id, void* data);
     esp_mqtt_client_handle_t client_{};
+#if APP_TB_HTTPS
+    void loopHttps();
+    esp_http_client_handle_t http_{};
+    std::array<char, 384> url_{};
+    bool clock_started_{};
+#endif
     std::array<std::array<char, 1536>, 4> queue_{};
 #endif
     std::atomic<bool> connected_{false}, failed_{false};
@@ -35,5 +49,7 @@ private:
     uint32_t started_ms_{}, acknowledged_{}, rejected_{};
     int in_flight_{-1};
     bool configured_{}, armed_{}, radio_active_{};
+    bool latest_rejected_{};
+    UploadStage stage_{UploadStage::Offline};
 };
 }

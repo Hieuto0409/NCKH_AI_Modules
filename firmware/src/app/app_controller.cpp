@@ -25,6 +25,7 @@ void AppController::begin() {
     binary_logger_.begin(TimestampService::nowUs(), ESP.getEfuseMac());
 
     const uint32_t now_ms = millis();
+    last_interaction_ms_ = now_ms;
     state_machine_.begin(TimestampService::nowUs());
     previous_state_ = state_machine_.state();
     runSelfTest(now_ms);
@@ -50,9 +51,21 @@ void AppController::loop() {
     cancel_button_.update(now_ms);
 
     const MeasurementState state_before = state_machine_.state();
+    const bool start_pressed = start_button_.pressed();
+    const bool second_pressed = cancel_button_.pressed();
+    if (start_pressed || second_pressed) last_interaction_ms_ = now_ms;
+    if (state_before == MeasurementState::Result && second_pressed && !start_pressed) {
+        result_page_ = (result_page_ + 1) % 3;
+        state_machine_.keepResultVisible(TimestampService::nowUs());
+        last_oled_update_ms_ = now_ms - config::kOledRefreshMs;
+    }
+    if (state_before == MeasurementState::Idle && second_pressed && !start_pressed) {
+        mqtt_client_.retryPending();
+    }
     consumeSamples(state_before == MeasurementState::Measuring || state_before == MeasurementState::Warmup);
     const uint64_t now_us = TimestampService::nowUs();
-    state_machine_.update(now_us, start_button_.pressed(), cancel_button_.pressed(),
+    state_machine_.update(now_us, start_pressed,
+                          second_pressed && state_before != MeasurementState::Result,
                           ppg_acquisition_.contactDetected(), ecg_acquisition_.leadOff(), feature_builder_.windowDrained(now_us));
 
     MeasurementState current = state_machine_.state();
@@ -84,13 +97,15 @@ void AppController::loop() {
         (current == MeasurementState::Idle || current == MeasurementState::Result));
 #if APP_ENABLE_MQTT && !APP_ENABLE_BINARY_LOG && !APP_ENABLE_CSV_LOG
     if (!acquisition_active_ && (last_network_pending_ != mqtt_client_.pending() ||
-        last_network_acked_ != mqtt_client_.acknowledged() || last_network_rejected_ != mqtt_client_.rejected())) {
+        last_network_acked_ != mqtt_client_.acknowledged() || last_network_rejected_ != mqtt_client_.rejected() ||
+        last_upload_stage_ != mqtt_client_.uploadStatus().stage)) {
         last_network_pending_ = mqtt_client_.pending();
         last_network_acked_ = mqtt_client_.acknowledged();
         last_network_rejected_ = mqtt_client_.rejected();
-        Serial.printf("UPLOAD pending=%u broker_acked=%lu rejected=%lu\n",
+        last_upload_stage_ = mqtt_client_.uploadStatus().stage;
+        Serial.printf("UPLOAD pending=%u server_acked=%lu rejected=%lu stage=%u\n",
             unsigned(last_network_pending_), static_cast<unsigned long>(last_network_acked_),
-            static_cast<unsigned long>(last_network_rejected_));
+            static_cast<unsigned long>(last_network_rejected_), unsigned(last_upload_stage_));
     }
 #endif
     updatePresentation(millis());
@@ -98,6 +113,7 @@ void AppController::loop() {
     if (light_sleep_ready_ && !acquisition_active_ && !mqtt_client_.radioActive() &&
         current == MeasurementState::Idle &&
         static_cast<uint32_t>(millis() - state_machine_.enteredAtMs()) >= 15000 &&
+        static_cast<uint32_t>(millis() - last_interaction_ms_) >= 15000 &&
         digitalRead(config::pins::kButton1) == HIGH && digitalRead(config::pins::kButton2) == HIGH) {
         Serial.flush();
         if (esp_sleep_enable_timer_wakeup(1000000) == ESP_OK) esp_light_sleep_start();
@@ -158,6 +174,10 @@ void AppController::startMeasurement(uint64_t now_us) {
 }
 
 void AppController::finishMeasurement(uint64_t now_us, uint32_t now_ms) {
+    result_page_ = 0;
+    oled_.setSleeping(false);
+    oled_.render(MeasurementState::QualityEvaluation, result_, 0,
+        ppg_acquisition_.sensorAvailable(), false, true, 0, mqtt_client_.uploadStatus());
     const FeaturePacket packet = feature_builder_.build(now_us, {}, {});
 #if APP_ENABLE_AI
     const BranchResult stress = stress_engine_.infer(packet);
@@ -179,14 +199,15 @@ void AppController::updatePresentation(uint32_t now_ms) {
     const auto state = state_machine_.state();
     const bool quiet = state == MeasurementState::Warmup || state == MeasurementState::Measuring;
     const bool idle_sleep = state == MeasurementState::Idle &&
-        static_cast<uint32_t>(now_ms - state_machine_.enteredAtMs()) >= 15000;
+        static_cast<uint32_t>(now_ms - state_machine_.enteredAtMs()) >= 15000 &&
+        static_cast<uint32_t>(now_ms - last_interaction_ms_) >= 15000;
     oled_.setSleeping(quiet || idle_sleep);
     if (!quiet && !idle_sleep && (state != previous_state_ ||
         now_ms - last_oled_update_ms_ >= config::kOledRefreshMs)) {
         last_oled_update_ms_ = now_ms;
         oled_.render(state_machine_.state(), result_, state_machine_.remainingMs(TimestampService::nowUs()),
                      ppg_acquisition_.sensorAvailable(), ppg_acquisition_.contactDetected(),
-                     ecg_acquisition_.leadOff());
+                     ecg_acquisition_.leadOff(), result_page_, mqtt_client_.uploadStatus());
     }
     if (!quiet && now_ms - last_telemetry_ms_ >= config::kTelemetryPeriodMs) {
         last_telemetry_ms_ = now_ms;

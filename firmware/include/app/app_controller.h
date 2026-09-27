@@ -57,11 +57,14 @@ private:
     MeasurementState previous_state_{MeasurementState::Boot};
     bool acquisition_active_{true};
     bool light_sleep_ready_{};
+    uint8_t result_page_{};
     uint32_t last_network_acked_{}, last_network_rejected_{};
     size_t last_network_pending_{};
     uint32_t last_ppg_poll_ms_{};
     uint32_t last_oled_update_ms_{};
     uint32_t last_telemetry_ms_{};
+    uint32_t last_interaction_ms_{};
+    UploadStage last_upload_stage_{UploadStage::Offline};
 };
 
 }

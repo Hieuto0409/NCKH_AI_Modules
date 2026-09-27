@@ -5,7 +5,7 @@ HERE=Path(__file__).resolve().parent
 FW=HERE.parents[1]
 with tempfile.TemporaryDirectory(prefix='ppg-power-') as temp:
     root=Path(temp)
-    shutil.copytree(FW/'include',root/'include')
+    shutil.copytree(FW/'include',root/'include',ignore=shutil.ignore_patterns('network_secrets.h'))
     for name in ('main.cpp','WiFi.h','mqtt_client.h'):
         shutil.copyfile(HERE/name,root/name)
     shutil.copyfile(FW/'src/network/mqtt_client.cpp',root/'production.cpp')
@@ -13,6 +13,16 @@ with tempfile.TemporaryDirectory(prefix='ppg-power-') as temp:
     subprocess.run(['g++','-std=c++17','-DAPP_ENABLE_MQTT=1','-Iinclude','-I.',
                     'main.cpp','production.cpp','-o','test.exe'],cwd=root,check=True)
     subprocess.run([str(root/'test.exe')],cwd=root,check=True)
+
+    for name in ('main_https.cpp','esp_http_client.h'):
+        shutil.copyfile(HERE/name,root/name)
+    (root/'lwip/apps').mkdir(parents=True)
+    (root/'lwip/apps/sntp.h').write_text('#pragma once\ninline void sntp_stop(){}\n')
+    (root/'Arduino.h').write_text('#pragma once\ninline int timeStarts=0;\ninline void configTime(int,int,const char*,const char*){++timeStarts;}\n')
+    (root/'ctime').write_text('#pragma once\n#include <time.h>\ninline time_t fakeNetworkNow=1800000000;\ninline time_t fakeNetworkTime(time_t*){return fakeNetworkNow;}\n#define time fakeNetworkTime\n')
+    subprocess.run(['g++','-std=c++17','-DAPP_ENABLE_MQTT=1','-DAPP_TB_HTTPS=1','-Iinclude','-I.',
+                    'main_https.cpp','production.cpp','-o','https.exe'],cwd=root,check=True)
+    subprocess.run([str(root/'https.exe')],cwd=root,check=True)
 
     # A fresh checkout with no secrets must never energize the radio.
     (root/'include/config/network_secrets.h').write_text('')

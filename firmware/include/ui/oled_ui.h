@@ -9,7 +9,7 @@ public:
     bool begin();
     void setSleeping(bool sleeping) { driver_.setSleeping(sleeping); }
     void render(MeasurementState state, const ResultSnapshot& result, uint32_t remaining_ms,
-                bool ppg_available, bool contact, bool lead_off);
+                bool ppg_available, bool contact, bool lead_off, uint8_t page, UploadSnapshot upload);
 
 private:
     OledDriver driver_{};

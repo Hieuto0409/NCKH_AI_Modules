@@ -1,5 +1,11 @@
 # Kiểm thử bo từ VS Code
 
+Với source0.5.0, dùng `--manifest docs/thingsboard-oled/evidence.json` (đường dẫn
+tính từ repo root) và `--log-dir firmware/.pio/verification/thingsboard`. Manifest
+0.4.0 được giữ làm bằng chứng lịch sử và sẽ từ chối binary mới. Sau khi thay cấu
+hình riêng, hash binary có thể đổi: build/kiểm chứng lại trước khi tạo manifest
+cục bộ mới. Xem [kết quả0.5.0](../../../docs/thingsboard-oled/VALIDATION.md).
+
 Mở thư mục `firmware/` trong VS Code. Công cụ `flash_and_capture.py` dùng Python
 của PlatformIO (có pyserial), esptool và các binary đã build. Nó kiểm tra SHA256
 `firmware.bin` với manifest trước khi ghi; esptool kiểm tra các vùng flash đã ghi.
@@ -20,9 +26,9 @@ phải xác nhận lại cổng/bo trước lần nạp khác.
    mới; không bỏ kiểm tra hash chỉ để nạp được.
 4. Chạy chẩn đoán, đọc `BOARD DIAGNOSTICS COMPLETE` cùng toàn bộ kết quả. Từ
    COMPLETE chỉ có nghĩa chương trình chạy tới cuối, **không có nghĩa mọi test đạt**.
-5. Luôn chạy **Flash production and test** cuối cùng, xác nhận boot0.4.0 và SELFTEST.
+5. Luôn nạp lại profile production cuối cùng, xác nhận đúng phiên bản và SELFTEST.
 
-Helper hiện lưu log vào thư mục local có ngày `board-2026-09-27` và ghi đè log
+Helper mặc định lưu log vào thư mục local có ngày `board-2026-09-27` và ghi đè log
 cùng profile. Sao lưu log trước khi lặp lại. Byte ROM boot115200 có thể không đọc
 được ở đầu capture921600; đối chiếu các dòng runtime sau đó. Timeout capture
 không tự đánh giá PASS/FAIL; cần đọc log và kiểm tra kết quả, lỗi/reset và số mẫu.

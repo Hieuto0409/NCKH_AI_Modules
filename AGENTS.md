@@ -5,17 +5,27 @@
 The user requested the repaired integrated firmware in this repository:
 `https://github.com/Hieuto0409/NCKH_AI_Modules`.
 
-- `firmware/` is the integrated device firmware 0.4.0. Build and test there.
+- `firmware/` is the integrated device firmware 0.5.0. Build and test there.
 - `tin_hieu/` is the standalone signal-processing reference, not a linked library
   in the integrated firmware. Do not assume its combined-rate API matches both streams.
 - Root `src/`, `include/`, `lib/`, `tools/`, `test/`, and `platformio.ini` remain
   the existing AI modules/demo. Do not overwrite them when changing device firmware.
 
-## Current power/network behavior (0.4.0)
+## Current OLED/ThingsBoard behavior (0.5.0)
+
+Read `docs/thingsboard-oled/FLOW.md` and `VALIDATION.md` first. OLED result pages
+are metrics, AI screening, upload; BTN2 changes pages and retries pending data in
+Idle. Keep OLED asleep during warmup/acquisition. The Internet ThingsBoard profile
+uses HTTPS 443 with GTS Root R4, hostname/time verification and HTTP 200 ACK;
+the older TCP MQTT profile is for trusted LAN only. Never embed tenant login or
+commit device tokens, Wi-Fi credentials, or firmware binaries containing them.
+Distinguish verified host-to-server connectivity from ESP32-to-server validation.
+
+## Power/network baseline (0.4.0, preserved in 0.5.0)
 
 Read `docs/power-and-noise/REVIEW.md` and `VALIDATION_RESULTS.md` for the schematic
 review and post-measurement upload lifecycle. Wi-Fi must remain off throughout
-contact/warmup/acquisition. Keep bounded uploads, QoS1 acknowledgement, no silent
+contact/warmup/acquisition. Keep bounded uploads, QoS1/HTTP200 acknowledgement, no silent
 queue loss, sensor pause/resume, and unmodified sample rates/model contracts.
 Do not claim measured battery life or eliminated interference from host tests.
 

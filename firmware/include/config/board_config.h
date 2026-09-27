@@ -8,6 +8,10 @@
 #define APP_ENABLE_MQTT 0
 #endif
 
+#ifndef APP_TB_HTTPS
+#define APP_TB_HTTPS 0
+#endif
+
 #ifndef APP_ENABLE_AI
 #define APP_ENABLE_AI 1
 #endif

@@ -1,0 +1,67 @@
+{
+  "date": "2026-09-27",
+  "firmware": "0.5.0",
+  "base_commit": "b7733954934f9b9a0e200b99c2775b7af6d16dce",
+  "firmware_source_sha256": "abd63ce7f1701f9071d79e578780e8f24e710512508e5f703188bc765032f57a",
+  "digest_scope": "firmware src/**/*.cpp, include/**/*.h excluding private/example network config, and platformio.ini; lexical path order",
+  "builds": {
+    "esp32-s3-devkitc-1": {
+      "status": "PASS",
+      "static_ram_bytes": 81736,
+      "linked_flash_bytes": 414805,
+      "firmware_bin_sha256": "09f9a6ccd2b3e9d47ecfd6e7b22bb53fd854a109d38515383ce05fba2bf9d13f"
+    },
+    "esp32-s3-devkitc-1-thingsboard": {
+      "status": "PASS",
+      "static_ram_bytes": 114024,
+      "linked_flash_bytes": 990905,
+      "firmware_bin_sha256": "694502053ac5c24550c8d934f56fe37febda3c88b1fa6d8a0fbc46cc521b3789"
+    },
+    "esp32-s3-devkitc-1-mqtt": {
+      "status": "PASS",
+      "static_ram_bytes": 113504,
+      "linked_flash_bytes": 967873,
+      "firmware_bin_sha256": "0323b830687ce2567e925e50bebe38b0c818521e6c3bfc2705a317e10aec3dd5"
+    },
+    "esp32-s3-devkitc-1-raw-log": {
+      "status": "PASS",
+      "static_ram_bytes": 80048,
+      "linked_flash_bytes": 401337,
+      "firmware_bin_sha256": "8ba67004e47ccc1924d9a2a9380fa9c4197f14e7111487b128953b40d59cb04f"
+    },
+    "esp32-s3-devkitc-1-fixture": {
+      "status": "PASS",
+      "static_ram_bytes": 22264,
+      "linked_flash_bytes": 330441,
+      "firmware_bin_sha256": "6286bc315141f29b7b99baa42252547bae7df2f9c9068bf6e9f1e536176a6f30"
+    }
+  },
+  "tests": {
+    "native": "42/42 PASS",
+    "oled_host": "PASS",
+    "mqtt_host": "8 scenarios PASS",
+    "https_host": "13 scenarios PASS",
+    "unconfigured_radio_off": "PASS (MQTT profile; shared configuration gate)",
+    "serialization": "PASS; 765 JSON bytes, 18 binary records",
+    "host_real_https": "HTTP200 and ThingsBoard telemetry readback PASS",
+    "tls_root_only": "GTS Root R4 only, hostname and validity checked PASS"
+  },
+  "board": {
+    "installed_profile": "esp32-s3-devkitc-1",
+    "installed_sha256": "09f9a6ccd2b3e9d47ecfd6e7b22bb53fd854a109d38515383ce05fba2bf9d13f",
+    "flash_region_hash_verifications": 4,
+    "capture_seconds": 25,
+    "runtime_lines": [
+      "SELFTEST ppg=ok ecg=ok backend=ESP32_ADC1_ONESHOT_CANDIDATE",
+      "PPGFW 0.5.0 | MAX30102=200Hz ECG=500Hz | PSRAM=yes | AI=7d4683581c8c01ff6878bcad31a601aff271f2a0"
+    ],
+    "boot_count": 1,
+    "idle_diag_lines": 24,
+    "idle_diag_example": "DIAG ppg=0/0 drop=0 ovf=0 q=0 ecg=0/0 drop=0 lead=0 q=0",
+    "crash_markers_present": false,
+    "direct_esp32_thingsboard": "NOT RUN; Wi-Fi credential permission pending",
+    "oled_visual_and_physical_buttons": "NOT RUN"
+  },
+  "private_wifi_configured": false,
+  "clinical_validation": false
+}
